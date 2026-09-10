@@ -1,4 +1,4 @@
-import { entryValid, moods, seeds, type Entry } from './data';
+import { blankEntryFields, entryValid, isSample, moods, seeds, type Entry } from './data';
 
 export const STORE = 'ephemera-journal-v2';
 export type CollectionKind = 'tags' | 'moods';
@@ -7,25 +7,26 @@ export type Tombstone = { entry: Entry; deleted_at: string };
 export type SyncMeta = { dirtyIds: string[]; tombstones: Tombstone[]; bases: Record<string, string> };
 export type Journal = { entries: Entry[]; catalog: Catalog; sync: SyncMeta };
 export const cleanName = (name: string) => name.trim().replace(/^#+/, '').trim();
-const unique = (names: string[]) => [...new Set(names.filter(Boolean))];
+export const NAME_LIMIT = 16;
+/** One naming rule for tags and moods, shared by the editor and the collection manager. */
+export const validName = (name: string) => !!name && name.length <= NAME_LIMIT && !/[,，]/.test(name);
+export const unique = (names: string[]) => [...new Set(names.filter(Boolean))];
 export const defaultCatalog = (): Catalog => ({ tags: [], moods: [...moods] });
-export const defaultSync = (entries: Entry[] = []): SyncMeta => ({ dirtyIds: unique(entries.filter(e => !e.id.startsWith('sample-')).map(e => e.id)), tombstones: [], bases: {} });
-export const dedupeEntries = (entries: Entry[]) => {
-  const byId = new Map<string, Entry>();
-  for (const entry of entries) {
-    const current = byId.get(entry.id);
-    if (!current || entry.updated_at > current.updated_at) byId.set(entry.id, entry);
+export const defaultSync = (entries: Entry[] = []): SyncMeta => ({ dirtyIds: unique(entries.filter(e => !isSample(e.id)).map(e => e.id)), tombstones: [], bases: {} });
+
+/** Latest-wins fold by id: the single place that decides how two versions of one record are ordered. */
+export const latestById = <T,>(items: T[], id: (item: T) => string, stamp: (item: T) => string) => {
+  const byId = new Map<string, T>();
+  for (const item of items) {
+    const current = byId.get(id(item));
+    if (!current || stamp(item) > stamp(current)) byId.set(id(item), item);
   }
-  return [...byId.values()];
+  return byId;
 };
-export const mergeTombstones = (...groups: Tombstone[][]) => {
-  const byId = new Map<string, Tombstone>();
-  for (const tombstone of groups.flat()) {
-    const current = byId.get(tombstone.entry.id);
-    if (!current || tombstone.deleted_at > current.deleted_at) byId.set(tombstone.entry.id, tombstone);
-  }
-  return [...byId.values()];
-};
+export const dedupeEntries = (entries: Entry[]) => [...latestById(entries, e => e.id, e => e.updated_at).values()];
+export const mergeTombstones = (...groups: Tombstone[][]) => [...latestById(groups.flat(), t => t.entry.id, t => t.deleted_at).values()];
+/** Tombstones that still hold recoverable content — the contract between the recycle list and purging. */
+export const trashedTombstones = (sync: SyncMeta) => sync.tombstones.filter(t => t.entry.title || t.entry.body);
 
 const syncValid = (value: unknown): value is SyncMeta => {
   if (!value || typeof value !== 'object') return false;
@@ -46,9 +47,14 @@ export function parseJournal(text: string): Journal {
   }
   const sync = data?.sync === undefined ? defaultSync(entries) : data.sync;
   if (!syncValid(sync)) throw new Error('同步信息格式不正确');
-  const tombstones = new Map(mergeTombstones(sync.tombstones).map(tombstone => [tombstone.entry.id, tombstone]));
-  const live = entries.filter(entry => !tombstones.has(entry.id) || entry.updated_at > tombstones.get(entry.id)!.deleted_at);
-  for (const entry of live) tombstones.delete(entry.id);
+  const tombstones = latestById(sync.tombstones, t => t.entry.id, t => t.deleted_at);
+  const live = entries.filter(entry => {
+    const tombstone = tombstones.get(entry.id);
+    if (!tombstone) return true;
+    if (entry.updated_at <= tombstone.deleted_at) return false;
+    tombstones.delete(entry.id);
+    return true;
+  });
   return { entries: live, catalog: { tags: unique(catalog.tags), moods: unique(catalog.moods) }, sync: { dirtyIds: unique(sync.dirtyIds), tombstones: [...tombstones.values()], bases: { ...sync.bases } } };
 }
 
@@ -73,11 +79,12 @@ export function collectionNames(journal: Journal, kind: CollectionKind) {
 export function changeCollection(journal: Journal, kind: CollectionKind, from: string | null, to: string | null, now = new Date().toISOString()): Journal {
   const names = collectionNames(journal, kind);
   const nextNames = unique([...names.filter(n => n !== from), ...(to ? [to] : [])]);
-  const entries = from === null ? journal.entries : journal.entries.map(entry => {
-    if (kind === 'tags' && entry.tags.includes(from)) return { ...entry, tags: unique(entry.tags.flatMap(t => t !== from ? [t] : to ? [to] : [])), updated_at: now };
-    if (kind === 'moods' && entry.mood === from) return { ...entry, mood: to ?? '', updated_at: now };
-    return entry;
-  });
+  const rename = from === null ? null : kind === 'tags'
+    ? (entry: Entry) => entry.tags.includes(from)
+      ? { ...entry, tags: to ? unique(entry.tags.map(t => t === from ? to : t)) : entry.tags.filter(t => t !== from), updated_at: now }
+      : entry
+    : (entry: Entry) => entry.mood === from ? { ...entry, mood: to ?? '', updated_at: now } : entry;
+  const entries = rename === null ? journal.entries : journal.entries.map(rename);
   return { entries, catalog: { ...journal.catalog, [kind]: nextNames }, sync: journal.sync };
 }
 
@@ -87,12 +94,13 @@ export function trackLocalChanges(journal: Journal, nextEntries: Entry[], now = 
   const dirty = new Set(journal.sync.dirtyIds);
   const tombstones = new Map(journal.sync.tombstones.map(tombstone => [tombstone.entry.id, tombstone]));
   for (const [id, entry] of before) {
-    if (!after.has(id) && !id.startsWith('sample-')) { dirty.add(id); tombstones.set(id, { entry, deleted_at: now }); }
+    if (!after.has(id) && !isSample(id)) { dirty.add(id); tombstones.set(id, { entry, deleted_at: now }); }
   }
   for (const [id, entry] of after) {
-    if (id.startsWith('sample-')) continue;
+    if (isSample(id)) continue;
     const old = before.get(id);
-    if (!old || JSON.stringify(old) !== JSON.stringify(entry)) dirty.add(id);
+    // Edits always produce a new object, so an identical reference is unchanged without serializing.
+    if (!old || (old !== entry && JSON.stringify(old) !== JSON.stringify(entry))) dirty.add(id);
     tombstones.delete(id);
   }
   return { ...journal.sync, dirtyIds: [...dirty], tombstones: [...tombstones.values()] };
@@ -100,11 +108,10 @@ export function trackLocalChanges(journal: Journal, nextEntries: Entry[], now = 
 
 /** Keep deletion markers so offline devices cannot silently resurrect purged rows. */
 export function purgeTrash(sync: SyncMeta, now = new Date().toISOString()): SyncMeta {
-  const targets = sync.tombstones.filter(t => t.entry.title || t.entry.body);
-  const ids = new Set(targets.map(t => t.entry.id));
-  return { ...sync, dirtyIds: [...new Set([...sync.dirtyIds, ...ids])],
+  const ids = new Set(trashedTombstones(sync).map(t => t.entry.id));
+  return { ...sync, dirtyIds: unique([...sync.dirtyIds, ...ids]),
     tombstones: sync.tombstones.map(t => ids.has(t.entry.id) ? {
       deleted_at: now,
-      entry: { ...t.entry, title: '', body: '', mood: '', weather: '', tags: [], favorite: false, cover: false, updated_at: now }
+      entry: { ...t.entry, ...blankEntryFields(), updated_at: now }
     } : t) };
 }

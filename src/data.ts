@@ -1,7 +1,18 @@
 export type Entry = {id:string;title:string;body:string;date:string;mood:string;weather:string;tags:string[];favorite:boolean;cover?:boolean;updated_at:string};
 export const localDate=(date=new Date())=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+// Noon anchoring keeps a date string from shifting a day when it crosses a timezone offset.
+export const asDate=(value:string)=>new Date(value+'T12:00:00');
+export const monthStart=(year:number,monthIndex:number)=>new Date(year,monthIndex,1,12);
+export const thisMonth=()=>{const now=new Date();return monthStart(now.getFullYear(),now.getMonth())};
+export const displayDate=(date:string)=>date.replaceAll('-',' / ');
 const daysAgo=(n:number)=>{const d=new Date();d.setDate(d.getDate()-n);return localDate(d)};
 export const moods=['平静','开心','感恩','低落','疲惫'];
+// Seed entries are display-only samples: they never enter the sync queue.
+export const SAMPLE_PREFIX='sample-';
+export const isSample=(id:string)=>id.startsWith(SAMPLE_PREFIX);
+// One field list so a blanked tombstone cannot silently retain content when Entry grows.
+export const blankEntryFields=()=>({title:'',body:'',mood:'',weather:'',tags:[] as string[],favorite:false,cover:false});
+export const countWords=(body:string)=>body.replace(/\s/g,'').length;
 export const seeds:Entry[]=[
  {id:'sample-1',title:'日子很慢，阳光很暖',body:'午后的阳光穿过窗帘，在桌上落下一小片金色。\n\n泡了一杯茶，翻开读到一半的书。窗外的树影轻轻晃动，突然觉得，什么也不做的时光，也值得被认真收藏。\n\n今天没有什么特别的事。可这份平常，就是生活给我的小小礼物。',date:daysAgo(0),mood:'平静',weather:'晴天',tags:['日常','小确幸'],favorite:true,cover:true,updated_at:new Date().toISOString()},
  {id:'sample-2',title:'在雨声里，给自己留一盏灯',body:'下班的时候突然下起了雨。没有带伞，索性在街角的旧书店多待了一会儿。\n\n店主正在整理一摞旧诗集，空气里是纸张和雨水的气味。买下一本扉页写着陌生人名字的书，像接住了一段未曾谋面的时光。',date:daysAgo(1),mood:'平静',weather:'小雨',tags:['随想','阅读'],favorite:false,updated_at:new Date().toISOString()},

@@ -4,7 +4,9 @@ import { createServer } from 'vite';
 
 const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [], entries: [] }, server: { middlewareMode: true }, appType: 'custom' });
 after(() => server.close());
-const { parseJournal, changeCollection, collectionNames, readJournal, trackLocalChanges, defaultSync, STORE } = await server.ssrLoadModule('/src/journal.ts');
+const { parseJournal, changeCollection, collectionNames, readJournal, trackLocalChanges, defaultSync, purgeTrash, STORE } = await server.ssrLoadModule('/src/journal.ts');
+// One journal literal so a new SyncMeta field does not have to be added to every test.
+const journalOf = ({ entries = [], catalog = { tags: [], moods: [] }, ...sync }) => ({ entries, catalog, sync: { dirtyIds: [], tombstones: [], bases: {}, ...sync } });
 const { planSync } = await server.ssrLoadModule('/src/sync.ts');
 const entry = { id: 'test-only', title: '测试书页', body: '保留正文', date: '2026-09-10', mood: '开心', weather: '晴天', tags: ['阅读', '日常'], favorite: true, updated_at: '2026-09-09T00:00:00.000Z' };
 const fixture = () => ({ entries: [structuredClone(entry), { ...structuredClone(entry), id: 'unrelated', tags: ['散步'], mood: '平静' }], catalog: { tags: ['阅读', '日常', '散步', '尚未使用'], moods: ['开心', '平静'] }, sync: defaultSync() });
@@ -66,7 +68,7 @@ test('storage migration reads old records without writing, prefers v2, and retai
 });
 
 test('offline edits and deletes are queued without losing the deleted body', () => {
-  const source = { entries: [entry], catalog: { tags: [], moods: [] }, sync: { dirtyIds: [], tombstones: [], bases: { [entry.id]: entry.updated_at } } };
+  const source = journalOf({ entries: [entry], bases: { [entry.id]: entry.updated_at } });
   const edited = { ...entry, body: '离线修改', updated_at: '2026-09-10T01:00:00.000Z' };
   assert.deepEqual(trackLocalChanges(source, [edited]).dirtyIds, [entry.id]);
   const deleted = trackLocalChanges(source, [], '2026-09-10T02:00:00.000Z');
@@ -75,7 +77,7 @@ test('offline edits and deletes are queued without losing the deleted body', () 
 });
 
 test('a normal sync uploads local changes and clears the pending queue', () => {
-  const source = { entries: [entry], catalog: { tags: [], moods: [] }, sync: { dirtyIds: [entry.id], tombstones: [], bases: {} } };
+  const source = journalOf({ entries: [entry], dirtyIds: [entry.id] });
   const plan = planSync(source, [], '2026-09-10T03:00:00.000Z', () => 'copy-id');
   assert.equal(plan.uploads.length, 1);
   assert.equal(plan.uploads[0].row.deleted_at, null);
@@ -88,7 +90,7 @@ test('simultaneous local and cloud edits preserve both versions as a conflict co
   const base = '2026-09-08T00:00:00.000Z';
   const local = { ...entry, body: '本机文字', updated_at: '2026-09-10T01:00:00.000Z' };
   const cloud = { ...entry, body: '云端文字', updated_at: '2026-09-10T02:00:00.000Z', deleted_at: null };
-  const source = { entries: [local], catalog: { tags: [], moods: [] }, sync: { dirtyIds: [entry.id], tombstones: [], bases: { [entry.id]: base } } };
+  const source = journalOf({ entries: [local], dirtyIds: [entry.id], bases: { [entry.id]: base } });
   const plan = planSync(source, [cloud], '2026-09-10T03:00:00.000Z', () => 'conflict-copy');
   assert.equal(plan.conflicts, 1);
   assert.equal(plan.journal.entries.find(e => e.id === entry.id).body, '云端文字');
@@ -100,7 +102,7 @@ test('simultaneous local and cloud edits preserve both versions as a conflict co
 test('cloud deletion removes a clean local copy while edit-versus-delete preserves the edit as a new entry', () => {
   const deletedAt = '2026-09-10T02:00:00.000Z';
   const cloudDelete = { ...entry, title: '', body: '', mood: '', weather: '', tags: [], favorite: false, updated_at: deletedAt, deleted_at: deletedAt };
-  const clean = { entries: [entry], catalog: { tags: [], moods: [] }, sync: { dirtyIds: [], tombstones: [], bases: { [entry.id]: entry.updated_at } } };
+  const clean = journalOf({ entries: [entry], bases: { [entry.id]: entry.updated_at } });
   assert.equal(planSync(clean, [cloudDelete]).journal.entries.length, 0);
   const localEdit = { ...entry, body: '删除前写下的新内容', updated_at: '2026-09-10T03:00:00.000Z' };
   const dirty = { ...clean, entries: [localEdit], sync: { ...clean.sync, dirtyIds: [entry.id] } };
@@ -112,7 +114,7 @@ test('cloud deletion removes a clean local copy while edit-versus-delete preserv
 
 test('a queued local deletion preserves cloud content and uses the last seen version as its write condition', () => {
   const deletedAt = '2026-09-10T02:00:00.000Z';
-  const source = { entries: [], catalog: { tags: [], moods: [] }, sync: { dirtyIds: [entry.id], tombstones: [{ entry, deleted_at: deletedAt }], bases: { [entry.id]: entry.updated_at } } };
+  const source = journalOf({ dirtyIds: [entry.id], tombstones: [{ entry, deleted_at: deletedAt }], bases: { [entry.id]: entry.updated_at } });
   const plan = planSync(source, [{ ...entry, deleted_at: null }]);
   assert.equal(plan.uploads[0].row.id, entry.id);
   for (const key of ['title','body','mood','weather','tags','favorite']) assert.deepEqual(plan.uploads[0].row[key], entry[key]);
@@ -124,18 +126,17 @@ test('a remote edit wins over a concurrent local deletion and is surfaced as a c
   const base = entry.updated_at;
   const deletedAt = '2026-09-10T02:00:00.000Z';
   const remote = { ...entry, body: '另一台设备刚写的正文', updated_at: '2026-09-10T03:00:00.000Z', deleted_at: null };
-  const source = { entries: [], catalog: { tags: [], moods: [] }, sync: { dirtyIds: [entry.id], tombstones: [{ entry, deleted_at: deletedAt }], bases: { [entry.id]: base } } };
+  const source = journalOf({ dirtyIds: [entry.id], tombstones: [{ entry, deleted_at: deletedAt }], bases: { [entry.id]: base } });
   const plan = planSync(source, [remote]);
   assert.equal(plan.conflicts, 1);
   assert.equal(plan.uploads.length, 0);
   assert.equal(plan.journal.entries[0].body, '另一台设备刚写的正文');
 });
 
-test('empty trash removes content locally and remotely while retaining deletion markers', async () => {
- const { purgeTrash } = await server.ssrLoadModule('/src/journal.ts');
+test('empty trash removes content locally and remotely while retaining deletion markers', () => {
  const deletedAt='2026-09-10T02:00:00.000Z', now='2026-09-10T04:00:00.000Z';
  const cloud={...entry,updated_at:deletedAt,deleted_at:deletedAt};
- const source={entries:[],catalog:{tags:[],moods:[]},sync:{dirtyIds:[],bases:{[entry.id]:deletedAt},tombstones:[{entry,deleted_at:deletedAt}]}};
+ const source=journalOf({bases:{[entry.id]:deletedAt},tombstones:[{entry,deleted_at:deletedAt}]});
  const sync=purgeTrash(source.sync,now);
  assert.equal(source.sync.tombstones[0].entry.body,entry.body);
  assert.equal(sync.tombstones[0].entry.body,'');

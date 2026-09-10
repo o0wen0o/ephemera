@@ -86,11 +86,11 @@ main { max-width: 1300px; }
 .date-picker { position: relative; width: max-content; max-width: 100%; }
 .date-trigger { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 8px 11px; border: 1px solid var(--control-border); border-radius: 6px; font-size: 12px; background: #f2f5ec; }
 .date-trigger[aria-expanded=true] { border-color: #7c916e; }
-.date-popover { position: absolute; top: calc(100% + 7px); left: 0; width: 304px; max-width: calc(100vw - 66px); z-index: 4; box-shadow: 0 12px 35px #243d2924; border-radius: 10px; }
+.date-popover { position: absolute; top: calc(100% + 7px); left: 0; width: 304px; max-width: calc(100vw - 66px); z-index: 8; box-shadow: 0 12px 35px #243d2924; border-radius: 10px; }
 .journal-calendar.compact { padding: 14px; background: #fffef9; }
 .compact .cal-toolbar { margin-bottom: 12px; }
 .compact .cal-day { min-height: 36px; justify-content: center; }
-.compact .cal-days { gap: 3px; }
+.compact .cal-weekdays, .compact .cal-days { gap: 3px; }
 .compact .cal-footer { margin-top: 10px; }
 
 /* Writing controls share one selection language; no native select menus. */
@@ -98,7 +98,7 @@ main { max-width: 1300px; }
 .writing-sheet .editor-top { position: sticky; top: 0; background: #fafaf4; z-index: 5; }
 .writing-sheet .draft-status { font-size: 11px; color: var(--ink-soft); }
 .writing-sheet .text-btn { font-size: 13px; min-height: 36px; }
-.writing-date { margin: 0 0 26px; }
+.writing-date { margin: 0 0 20px; }
 .writing-sheet .body-input { min-height: 240px; font-size: 16px; color: #465b41; }
 .writing-sheet .editor-footer { position: sticky; bottom: 0; background: #fafaf4; z-index: 3; flex-wrap: wrap; }
 .writing-sheet .editor-footer>span:first-child { font-size: 12px; }
@@ -111,7 +111,6 @@ main { max-width: 1300px; }
 .choice-chips button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 13px; border: 1px solid var(--control-border); background: #fcfcf8; color: #596b50; font-size: 12px; border-radius: 6px; overflow-wrap: anywhere; }
 .choice-chips button:hover { border-color: #9aa98e; background: #eef3e6; }
 .choice-chips button[aria-pressed=true] { color: #f6f8ee; background: #435d40; border-color: #435d40; }
-.field-hint { font-size: 11px; line-height: 1.8; color: var(--ink-soft); margin-top: 10px; }
 .selected-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .selected-tags:not(:empty) { margin-bottom: 12px; }
 .selected-tags button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; min-height: 36px; border-radius: 5px; background: #e4ecda; color: #3e5938; font-size: 12px; overflow-wrap: anywhere; }
@@ -134,8 +133,7 @@ main { max-width: 1300px; }
 .collection-tabs button { display: flex; align-items: center; gap: 8px; padding: 10px 8px 14px; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--ink-soft); }
 .collection-tabs button[aria-pressed=true] { color: var(--green); border-color: #435d40; }
 .collection-tabs small { font-size: 11px; opacity: .7; }
-.collection-help, .collection-note { font-size: 12px; line-height: 1.8; color: var(--ink-soft); }
-.collection-help { min-height: 44px; margin-bottom: 12px; }
+.collection-help, .collection-help { min-height: 44px; margin-bottom: 12px; }
 .collection-create { display: flex; gap: 8px; }
 .collection-create input, .rename-form input { width: 100%; min-height: 42px; border: 1px solid var(--control-border); border-radius: 5px; background: #fffffb; padding: 10px 12px; font-size: 13px; color: var(--green); }
 .collection-search { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); margin-top: 20px; padding: 10px 0; color: var(--ink-soft); }
@@ -151,7 +149,6 @@ main { max-width: 1300px; }
 .collection-confirm { background: #edf1e5; border-radius: 6px; margin: 0 0 12px; padding: 14px; }
 .collection-confirm p { font-size: 12px; line-height: 1.9; margin-bottom: 12px; overflow-wrap: anywhere; }
 .collection-confirm>div { display: flex; justify-content: flex-end; gap: 8px; }
-.collection-note { margin-top: 18px; font-size: 11px; }
 .collection-empty { padding: 30px 5px; font-size: 12px; color: var(--ink-soft); }
 .setting-section p { color: var(--ink-soft); font-size: 13px; }
 .setting-section form input { font-size: 14px; }
@@ -198,7 +195,6 @@ main { max-width: 1300px; }
   .modal { max-height: 96dvh; }
   .writing-sheet .editor-paper { padding: 24px 20px; }
   .writing-sheet .title-input { font-size: 24px; }
-  .writing-sheet .body-input { font-size: 16px; }
   .writing-sheet .draft-status { font-size: 10px; }
   .writing-sheet .editor-footer .primary { font-size: 13px; }
   .writing-sheet .editor-top { padding: 10px 16px; }
@@ -242,12 +238,8 @@ main { max-width: 1300px; }
 .recycle-row small { display:block; font-size:11px; margin-top:6px; color:var(--ink-soft); }
 .modal:has(.writing-sheet) { height:92dvh; }
 .writing-sheet.editor { min-height:100%; }
-.writing-sheet .body-input { background:none; line-height:2; }
-.writing-sheet .writing-date { margin-bottom:20px; }
 .writing-sheet .title-input { margin-bottom:18px; }
-.date-popover { z-index:8; }
 .compact .cal-blank { min-height:36px; }
-.compact .cal-weekdays,.compact .cal-days { gap:3px; }
 body:has(.settings-panel) .toast { left:50%; bottom:18px; }
 @media(max-width:760px) {
  .settings-panel { padding:24px 20px; }
