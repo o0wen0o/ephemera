@@ -1,3 +1,4 @@
+import { Help } from './Help';
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { localDate, type Entry } from './data';
@@ -24,7 +25,7 @@ export function Calendar({ value, onChange, month, onMonthChange, entries = [], 
   const counts = new Map<string, Entry[]>();
   for (const entry of entries) counts.set(entry.date, [...(counts.get(entry.date) || []), entry]);
   useEffect(() => {
-    if (focusAfterMove.current) { root.current?.querySelector<HTMLButtonElement>(`[data-date="${focusDay}"]`)?.focus(); focusAfterMove.current = false; }
+    if (focusAfterMove.current) { root.current?.querySelector<HTMLButtonElement>(`[data-date="${focusDay}"]`)?.focus({ preventScroll: true }); focusAfterMove.current = false; }
   }, [focusDay, month]);
   const moveMonth = (delta: number) => onMonthChange(new Date(year, monthIndex + delta, 1, 12));
   const moveDay = (event: KeyboardEvent, date: string) => {
@@ -53,7 +54,7 @@ export function Calendar({ value, onChange, month, onMonthChange, entries = [], 
         return <button type="button" key={i} data-date={date} tabIndex={tabDate === date ? 0 : -1} onFocus={() => setFocusDay(date)} onKeyDown={e => moveDay(e, date)} aria-label={`${date}${records.length ? `，${records.length} 篇日记` : ''}`} aria-pressed={value === date} aria-current={date === localDate() ? 'date' : undefined} className={`cal-day${records.length ? ' has-record' : ''}`} onClick={() => onChange(date)}><span>{day}</span>{records.length > 0 && <i/>}{!compact && records[0] && <small>{records[0].title}</small>}</button>;
       })}</div>
     </>}
-    <div className="cal-footer"><span>{compact ? '方向键移动 · 回车选择' : '圆点标记有日记的日子'}</span><button type="button" onClick={() => { const today = new Date(); onMonthChange(new Date(today.getFullYear(), today.getMonth(), 1, 12)); setChooseMonth(false); onChange(localDate()); }}>今天</button></div>
+    <div className="cal-footer"><Help label="日历">{compact ? "方向键移动，回车选择日期。" : "圆点标记有日记的日子。"}</Help><button type="button" onClick={() => { const today = new Date(); onMonthChange(new Date(today.getFullYear(), today.getMonth(), 1, 12)); setChooseMonth(false); onChange(localDate()); }}>今天</button></div>
   </section>;
 }
 
@@ -66,11 +67,11 @@ export function DatePicker({ value, onChange }: { value: string; onChange: (date
     if (!open) return;
     const outside = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('pointerdown', outside);
-    root.current?.querySelector<HTMLButtonElement>('.cal-day[tabindex="0"]')?.focus();
+    root.current?.querySelector<HTMLButtonElement>('.cal-day[tabindex="0"]')?.focus({ preventScroll: true });
     return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
-  return <div className="date-picker" ref={root} onBlur={e => { if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false); }} onKeyDown={e => { if (e.key === 'Escape' && open) { e.preventDefault(); e.stopPropagation(); setOpen(false); trigger.current?.focus(); } }}>
+  return <div className="date-picker" ref={root} onBlur={e => { if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false); }} onKeyDown={e => { if (e.key === 'Escape' && open) { e.preventDefault(); e.stopPropagation(); setOpen(false); trigger.current?.focus({ preventScroll: true }); } }}>
     <button ref={trigger} type="button" className="date-trigger" aria-label="日记日期" aria-expanded={open} aria-controls={id} onClick={() => { setMonth(asDate(value)); setOpen(!open); }}><CalendarDays size={16}/>{value.replaceAll('-', ' / ')}<ChevronDown size={14}/></button>
-    {open && <div id={id} className="date-popover"><Calendar compact month={month} onMonthChange={setMonth} value={value} onChange={date => { onChange(date); setOpen(false); trigger.current?.focus(); }}/></div>}
+    {open && <div id={id} className="date-popover"><Calendar compact month={month} onMonthChange={setMonth} value={value} onChange={date => { onChange(date); setOpen(false); trigger.current?.focus({ preventScroll: true }); }}/></div>}
   </div>;
 }
