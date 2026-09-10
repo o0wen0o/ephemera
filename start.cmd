@@ -18,8 +18,8 @@ if not exist "node_modules\vite\bin\vite.js" (
   exit /b 1
 )
 echo Starting Ephemera. Keep this window open while using the app.
-echo Preview: http://localhost:5173/prototype
-"%EPHEMERA_NODE%" "node_modules\vite\bin\vite.js" --host 0.0.0.0 --open /prototype
+echo App: http://localhost:5173/
+"%EPHEMERA_NODE%" "node_modules\vite\bin\vite.js" --host 0.0.0.0 --open /
 set "EPHEMERA_EXIT=%ERRORLEVEL%"
 if not "%EPHEMERA_EXIT%"=="0" (
   echo.

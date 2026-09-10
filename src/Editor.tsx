@@ -1,25 +1,72 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, CloudSun, Feather, Save, X } from 'lucide-react';
-import { type Entry, localDate, moods, entryValid } from './data';
-const DRAFT='ephemera-prototype-draft-v1';
-export function Editor({entry,onClose,onSave,inline=false}:{entry?:Entry;onClose:()=>void;onSave:(entry:Entry)=>boolean;inline?:boolean}){
- const [value,setValue]=useState<Entry>(()=>{try{const d=JSON.parse(localStorage.getItem(DRAFT)||'null');if(entryValid(d)&&(!entry||d.id===entry.id))return d}catch{/* start an empty sheet */}if(entry)return {...entry};return {id:crypto.randomUUID(),title:'',body:'',date:localDate(),mood:'平静',weather:'晴天',tags:[],favorite:false,updated_at:new Date().toISOString()}});
- const [tag,setTag]=useState(value.tags.join('，'));
- const [saved,setSaved]=useState('');
- const [error,setError]=useState('');
- const [dirty,setDirty]=useState(false);
- const titleRef=useRef<HTMLInputElement>(null);
- const update=(part:Partial<Entry>)=>{setValue(v=>({...v,...part}));setDirty(true)};
- useEffect(()=>{if(!inline)titleRef.current?.focus()},[inline]);
- useEffect(()=>{if(!dirty)return;try{localStorage.setItem(DRAFT,JSON.stringify({...value,tags:tag.split(/[,，]/).map(t=>t.trim()).filter(Boolean)}));setSaved('草稿已存于本机')}catch{setSaved('草稿未保存，请导出或释放浏览器空间')}},[value,tag,dirty]);
- useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault()}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[dirty]);
- const submit=()=>{if(!value.title.trim()&&!value.body.trim()){setError('写下一句话，再把今天收好。');return}const updated={...value,title:value.title.trim()||'无题',tags:[...new Set(tag.split(/[,，]/).map(t=>t.trim()).filter(Boolean))].slice(0,8),updated_at:new Date().toISOString()};if(onSave(updated)){setDirty(false);try{localStorage.removeItem(DRAFT)}catch{/* entry is already saved */}if(inline){setValue({id:crypto.randomUUID(),title:'',body:'',date:localDate(),mood:'平静',weather:'晴天',tags:[],favorite:false,updated_at:new Date().toISOString()});setTag('');setSaved('上一篇日记已收好')}else onClose()}};
- return <section className={'editor '+(inline?'editor-inline':'')} aria-label="写日记">
- <div className="editor-top"><button className="text-btn" onClick={onClose}><ArrowLeft size={17}/>返回日记</button><span className="draft-status"><Check size={13}/>{saved||'只属于你的片刻'}</span>{!inline&&<button className="icon-btn" aria-label="关闭编辑器" onClick={onClose}><X size={20}/></button>}</div>
- <div className="editor-paper"><div className="editor-eyebrow"><Feather size={17}/><span>一页日常，一点微光</span></div><label className="sr-only" htmlFor="entry-title">日记标题</label><input ref={titleRef} id="entry-title" className="title-input" placeholder="为今天，起一个名字" value={value.title} onChange={e=>update({title:e.target.value})} maxLength={120}/>
- <div className="editor-meta"><label>日期 <input aria-label="日记日期" type="date" required value={value.date} onChange={e=>{if(e.target.value)update({date:e.target.value})}}/></label><label><CloudSun size={16}/><select aria-label="天气" value={value.weather} onChange={e=>update({weather:e.target.value})}>{['晴天','多云','小雨','下雪','阴天'].map(w=><option key={w}>{w}</option>)}</select></label></div>
- <label className="sr-only" htmlFor="entry-body">日记正文</label><textarea id="entry-body" className="body-input" placeholder={'此刻，你想留下什么？\n\n一阵风，一次相遇，或是一件微不足道的小事……'} value={value.body} onChange={e=>update({body:e.target.value})}/>
- <div className="editor-bottom"><span>今天的心情</span><div className="mood-choices">{moods.map((m,i)=><button key={m} className={value.mood===m?'selected':''} onClick={()=>update({mood:m})}>{['◡','☀','♡','☂','☾'][i]} {m}</button>)}</div><label className="tag-input-label">标签<input placeholder="日常，阅读，小确幸" aria-label="日记标签，用逗号分隔" value={tag} onChange={e=>{setTag(e.target.value);setDirty(true)}}/></label></div></div>
- <footer className="editor-footer"><span>{value.body.replace(/\s/g,'').length} 字 · 慢慢写，不着急</span>{error&&<span className="error" role="alert">{error}</span>}<button className="primary" onClick={submit}><Save size={16}/>收好这篇日记</button></footer>
- </section>
+import { ArrowLeft, Check, Cloud, CloudRain, CloudSun, Feather, Plus, Save, Snowflake, Sun, X } from 'lucide-react';
+import { type Entry, localDate, entryValid } from './data';
+import { cleanName } from './journal';
+import { DatePicker } from './Calendar';
+
+const DRAFT = 'ephemera-draft-v1';
+const weatherOptions = [{ name: '晴天', icon: Sun }, { name: '多云', icon: CloudSun }, { name: '小雨', icon: CloudRain }, { name: '阴天', icon: Cloud }, { name: '下雪', icon: Snowflake }];
+
+export function Editor({ entry, tags, moods, onClose, onSave }: {
+  entry?: Entry; tags: string[]; moods: string[]; onClose: () => void; onSave: (entry: Entry) => boolean;
+}) {
+  const [value, setValue] = useState<Entry>(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT) ?? localStorage.getItem('ephemera-prototype-draft-v1');
+      const draft = JSON.parse(raw || 'null');
+      if (entryValid(draft) && (!entry || (draft.id === entry.id && draft.updated_at >= entry.updated_at))) return draft;
+    } catch { /* Start from the saved entry when draft storage is unavailable. */ }
+    return entry ? { ...entry } : { id: crypto.randomUUID(), title: '', body: '', date: localDate(), mood: '', weather: '晴天', tags: [], favorite: false, updated_at: new Date().toISOString() };
+  });
+  const [tagQuery, setTagQuery] = useState('');
+  const [saved, setSaved] = useState('');
+  const [error, setError] = useState('');
+  const [dirty, setDirty] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const update = (part: Partial<Entry>) => { setValue(v => ({ ...v, ...part, updated_at: new Date().toISOString() })); setDirty(true); setError(''); };
+  useEffect(() => { titleRef.current?.focus(); }, []);
+  useEffect(() => {
+    if (!dirty) return;
+    try { localStorage.setItem(DRAFT, JSON.stringify(value)); setSaved('草稿已保存'); }
+    catch { setSaved('草稿保存失败，请保留此页'); }
+  }, [value, dirty]);
+  useEffect(() => { const warn = (e: BeforeUnloadEvent) => { if (dirty) e.preventDefault(); }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn); }, [dirty]);
+  const addTag = (raw: string) => {
+    const name = cleanName(raw);
+    if (!name) return;
+    if (name.length > 16 || /[,，]/.test(name)) { setError('标签请使用 1–16 个字，不含逗号。'); return; }
+    if (value.tags.includes(name)) { setTagQuery(''); return; }
+    if (value.tags.length >= 8) { setError('一篇日记最多添加 8 个标签。'); return; }
+    update({ tags: [...value.tags, name] }); setTagQuery('');
+  };
+  const submit = () => {
+    if (!value.title.trim() && !value.body.trim()) { setError('写下一句话，再把今天收好。'); return; }
+    if (tagQuery.trim()) { setError('请先添加正在输入的标签，或清空标签输入框。'); return; }
+    if (onSave({ ...value, title: value.title.trim() || '无题', updated_at: new Date().toISOString() })) {
+      setDirty(false);
+      // A null sentinel prevents a cleared draft from being recovered from the legacy key.
+      try { localStorage.setItem(DRAFT, 'null'); } catch { /* The diary itself is saved. */ }
+      onClose();
+    }
+  };
+  const suggestions = tags.filter(t => !value.tags.includes(t) && t.toLocaleLowerCase().includes(tagQuery.toLocaleLowerCase()));
+  const availableMoods = [...new Set([...moods, ...(value.mood ? [value.mood] : [])])];
+  return <section className="editor writing-sheet" aria-label="写日记">
+    <div className="editor-top"><button type="button" className="text-btn" onClick={onClose}><ArrowLeft size={17}/>返回书页</button><span className="draft-status" role="status"><Check size={13}/>{saved || '随时停笔，下次接着写'}</span></div>
+    <div className="editor-paper"><div className="editor-eyebrow"><Feather size={17}/><span>一页日常</span></div>
+      <label className="sr-only" htmlFor="entry-title">日记标题</label><input ref={titleRef} id="entry-title" className="title-input" placeholder="为今天，起一个名字" value={value.title} onChange={e => update({ title: e.target.value })} maxLength={120}/>
+      <div className="writing-date"><DatePicker value={value.date} onChange={date => update({ date })}/></div>
+      <label className="sr-only" htmlFor="entry-body">日记正文</label><textarea id="entry-body" className="body-input" placeholder={'此刻，你想留下什么？\n\n一阵风，一次相遇，或一件微不足道的小事……'} value={value.body} onChange={e => update({ body: e.target.value })}/>
+      <div className="writing-details">
+        <fieldset><legend>窗外天气</legend><div className="choice-chips">{weatherOptions.map(w => <button type="button" key={w.name} aria-pressed={value.weather === w.name} onClick={() => update({ weather: w.name })}><w.icon size={16}/>{w.name}</button>)}</div></fieldset>
+        <fieldset><legend>此刻心情 <span>可不选</span></legend><div className="choice-chips">{availableMoods.map(m => <button type="button" key={m} aria-pressed={value.mood === m} onClick={() => update({ mood: value.mood === m ? '' : m })}><span aria-hidden="true">{({ 平静: '◡', 开心: '☀', 感恩: '♡', 低落: '☂', 疲惫: '☾' } as Record<string, string>)[m] || '◦'}</span>{m}</button>)}</div><p className="field-hint">再次点击可取消；自定义心情可在「整理书页」中添加。</p></fieldset>
+        <fieldset><legend>生活标签 <span>{value.tags.length} / 8</span></legend>
+          <div className="selected-tags">{value.tags.map(t => <button type="button" key={t} aria-label={`移除标签${t}`} onClick={() => update({ tags: value.tags.filter(n => n !== t) })}>#{t}<X size={13}/></button>)}</div>
+          <div className="tag-entry"><input aria-label="搜索或新建标签" placeholder="搜索标签，或输入新名字…" maxLength={16} value={tagQuery} onChange={e => setTagQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); addTag(tagQuery); } }}/><button type="button" className="icon-btn" aria-label="添加输入的标签" disabled={!tagQuery.trim()} onClick={() => addTag(tagQuery)}><Plus size={18}/></button></div>
+          <div className="tag-suggestions">{suggestions.slice(0, 12).map(t => <button type="button" key={t} onClick={() => addTag(t)}>+ {t}</button>)}{tagQuery.trim() && !tags.includes(cleanName(tagQuery)) && !value.tags.includes(cleanName(tagQuery)) && <button type="button" className="create-tag" onClick={() => addTag(tagQuery)}>新建「{cleanName(tagQuery)}」</button>}</div>
+        </fieldset>
+      </div>
+    </div>
+    <footer className="editor-footer"><span>{value.body.replace(/\s/g, '').length} 字</span><button type="button" className="primary" onClick={submit}><Save size={16}/>保存日记</button>{error && <p className="field-error" role="alert">{error}</p>}</footer>
+  </section>;
 }

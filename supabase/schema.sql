@@ -1,4 +1,4 @@
--- Ephemera prototype: run in a separate scratch Supabase project.
+-- Ephemera database schema.
 create table if not exists public.entries (
  id uuid primary key,
  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
