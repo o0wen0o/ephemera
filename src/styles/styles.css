@@ -1122,7 +1122,19 @@ main {
         transform: translateX(-100%);
         transition: transform 0.2s;
         width: 238px;
-        padding: 28px 23px 0;
+        padding: calc(28px + env(safe-area-inset-top)) 23px 0;
+        height: 100dvh;
+        bottom: auto;
+        z-index: 61;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #95a68d transparent;
+    }
+    .sidebar > * {
+        flex-shrink: 0;
+    }
+    .sidebar .new-entry {
+        min-height: 48px;
     }
     .sidebar.mobile-open {
         transform: translateX(0);
@@ -1135,7 +1147,7 @@ main {
     }
     .sidebar-bottom {
         margin: 0 -23px;
-        padding: 18px 23px;
+        padding: 18px 23px calc(24px + env(safe-area-inset-bottom));
     }
     .sidebar-poem {
         min-height: 160px;
@@ -1144,7 +1156,8 @@ main {
         display: block;
         position: fixed;
         inset: 0;
-        z-index: 19;
+        z-index: 60;
+        touch-action: none;
         background: #23372d80;
         backdrop-filter: blur(2px);
     }
@@ -1247,7 +1260,9 @@ main {
     }
     .mobile-bottom {
         position: fixed;
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        justify-items: center;
         flex-direction: row;
         align-items: center;
         justify-content: space-around;
@@ -1277,13 +1292,14 @@ main {
         background: #405b42;
         color: #f6f9ed;
         border-radius: 50%;
-        width: 45px;
-        height: 45px;
-        min-width: 45px;
+        width: 55px;
+        height: 55px;
+        min-width: 55px;
+        padding: 0;
         justify-content: center;
-        margin-top: -20px;
+        margin-top: -36px;
         border: 5px solid #fbfcf5;
-        box-sizing: content-box;
+        box-sizing: border-box;
     }
     .toast {
         left: 50%;

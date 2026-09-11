@@ -8,7 +8,7 @@ import { readDrafts, removeDraft } from "./data/drafts";
 import { journalFromCloud } from "./services/sync";
 import { purgeTrash } from "./data/journal";
 import { Help } from "./components/Help";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
     BookOpen,
     CalendarDays,
@@ -192,6 +192,30 @@ export default function App() {
     const [emptyTrash, setEmptyTrash] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [mobileNav, setMobileNav] = useState(false);
+    useLayoutEffect(() => {
+        if (!mobileNav) return;
+        const body = document.body;
+        const { position, top, width } = body.style;
+        const scrollY = window.scrollY;
+        body.style.position = "fixed";
+        body.style.top = `-${scrollY}px`;
+        body.style.width = "100%";
+        const close = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setMobileNav(false);
+        };
+        const media = window.matchMedia("(max-width: 760px)");
+        const resize = () => { if (!media.matches) setMobileNav(false); };
+        document.addEventListener("keydown", close);
+        media.addEventListener("change", resize);
+        return () => {
+            body.style.position = position;
+            body.style.top = top;
+            body.style.width = width;
+            window.scrollTo({ top: scrollY, behavior: "instant" });
+            document.removeEventListener("keydown", close);
+            media.removeEventListener("change", resize);
+        };
+    }, [mobileNav]);
     const [toast, setToast] = useState("");
     const [online, setOnline] = useState(navigator.onLine);
     const [syncPulse, setSyncPulse] = useState(0);
@@ -393,6 +417,21 @@ export default function App() {
     const narrowed = Boolean(query || tag || mood || selectedDate);
     const headingDate = useMemo(() => HEADING_FMT.format(new Date()), []);
     const closeEditor = () => setEditing(null);
+    const startWriting = () => {
+        try {
+            const createdIds = new Set([
+                ...entries.map(entry => entry.id),
+                ...syncMeta.tombstones.map(t => t.entry.id)
+            ]);
+            const pending = readDrafts()
+                .filter(draft => !createdIds.has(draft.id))
+                .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
+            setMobileNav(false);
+            setEditing(pending ?? "new");
+        } catch {
+            setToast("草稿读取失败，请保留浏览器数据。");
+        }
+    };
     const closeReader = () => setReading(null);
     const closeSettings = () => setSettings(false);
     const closeDelete = () => setDeleteId(null);
@@ -729,7 +768,7 @@ export default function App() {
                         if (narrowed) clearFilters();
                         else if (view === "calendar") setMonth(thisMonth());
                         else if (view === "favorites") selectView("all");
-                        else setEditing("new");
+                        else startWriting();
                     }}
                 >
                     {narrowed ? "清除筛选" : VIEWS[view].emptyAction}
@@ -833,10 +872,7 @@ export default function App() {
                 <div className="sidebar-intro">一扇窗，一本日记，一方心安。</div>
                 <button
                     className="new-entry"
-                    onClick={() => {
-                        setEditing("new");
-                        setMobileNav(false);
-                    }}
+                    onClick={startWriting}
                 >
                     <Plus size={18} />
                     写一篇日记
@@ -1086,25 +1122,21 @@ export default function App() {
                             {VIEWS[id].title}
                         </button>
                     );
-                    // The write button sits between 回顾 and 珍藏, so emit it alongside the view it follows.
-                    return id === "calendar"
+                    // Keep two destinations on each side of the central write button.
+                    return id === "drafts"
                         ? [
                               button,
                               <button
                                   key="write"
                                   className="mobile-write"
                                   aria-label="写日记"
-                                  onClick={() => setEditing("new")}
+                                  onClick={startWriting}
                               >
                                   <Plus size={24} />
                               </button>
                           ]
                         : button;
                 })}
-                <button onClick={() => setOrganizing(true)}>
-                    <Tags size={19} />
-                    整理
-                </button>
             </nav>
             {discardDraft && (
                 <Confirm
