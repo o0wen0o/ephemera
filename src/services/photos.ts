@@ -35,6 +35,6 @@ export async function uploadPhoto(file: File, userId: string): Promise<string> {
     const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, blob, {
         contentType: "image/jpeg", upsert: false
     });
-    if (error) throw Error("图片上传失败，请检查网络、存储额度和图片配置脚本。文字草稿仍保留。");
+    if (error) throw Error("图片上传失败，请检查网络后重试。文字仍会保留。");
     return path;
 }

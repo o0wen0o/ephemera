@@ -29,14 +29,14 @@ const tombstoneRow = (tombstone: Tombstone): CloudEntry => ({
 export function validateCloudRows(rows: unknown[]): CloudEntry[] {
     return rows.map((row) => {
         if (!entryValid(row))
-            throw new Error("云端记录格式不匹配。请先运行最新的 Supabase 数据库脚本。");
+            throw new Error("云端数据暂时无法读取，请稍后再试。");
         const cloud = row as CloudEntry;
         if (
             cloud.deleted_at !== undefined &&
             cloud.deleted_at !== null &&
             typeof cloud.deleted_at !== "string"
         )
-            throw new Error("云端删除记录格式不匹配。");
+            throw new Error("云端数据暂时无法读取，请稍后再试。");
         return cloud;
     });
 }

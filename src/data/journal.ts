@@ -163,7 +163,7 @@ export function readJournal(): Journal & { error: string } {
             entries: [],
             catalog: defaultCatalog(),
             sync: defaultSync(),
-            error: "无法读取本机日记，原数据已保留。请先导出原始备份，再导入有效备份恢复。"
+            error: "无法读取本机日记，原数据仍保留。请导出原始备份后再恢复。"
         };
     }
 }

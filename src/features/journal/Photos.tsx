@@ -65,7 +65,7 @@ export function Photos({ paths = [], userId, onChange, onBusy }: {
     if (!onChange && !paths.length) return null;
     return <section className="journal-photos" aria-label="日记图片">
         {onChange && <div className="photo-heading"><span>日常留影 · {paths.length} / {MAX_PHOTOS}</span>
-            <Help label="图片">登录并联网后可添加最多 3 张照片，自动压缩，不保存原图。移除仅解除引用，云端文件保留并占用额度；JSON 备份不包含图片文件。上传时请保留此页。</Help>
+            <Help label="图片">登录并联网后可添加最多 3 张照片，会自动压缩。备份文件不含图片。上传时请勿关闭页面。</Help>
             <button type="button" className="text-btn" disabled={!userId || uploading || paths.length >= MAX_PHOTOS} onClick={() => input.current?.click()}><ImagePlus size={17} />{uploading ? "上传中…" : "添加图片"}</button>
             <input ref={input} type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={e => { void add(e.target.files?.[0]); e.target.value = ""; }} />
         </div>}

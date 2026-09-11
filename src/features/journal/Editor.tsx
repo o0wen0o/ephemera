@@ -30,7 +30,7 @@ export function Editor({
 }) {
     const [value, setValue] = useState<Entry>(() => {
         try {
-            const draft = entry && readDrafts().find(d => d.id === entry.id);
+            const draft = entry && readDrafts().find((d) => d.id === entry.id);
             if (draft) return draft;
         } catch {
             /* Start from the saved entry when draft storage is unavailable. */
@@ -57,8 +57,12 @@ export function Editor({
     const update = (part: Partial<Entry>) => {
         const next = { ...value, ...part, updated_at: new Date().toISOString() };
         setValue(next);
-        try { putDraft(next); setSaved("草稿已保存 · 本机"); }
-        catch { setSaved("草稿保存失败，请保留此页"); }
+        try {
+            putDraft(next);
+            setSaved("草稿已保存 · 本机");
+        } catch {
+            setSaved("草稿保存失败，请勿关闭页面");
+        }
         setDirty(true);
         setError("");
     };
@@ -97,7 +101,7 @@ export function Editor({
             return;
         }
         if (tagQuery.trim()) {
-            setError("请先添加正在输入的标签，或清空标签输入框。");
+            setError("请先添加或清空正在输入的标签。");
             return;
         }
         if (
@@ -161,7 +165,12 @@ export function Editor({
                     value={value.body}
                     onChange={(e) => update({ body: e.target.value })}
                 />
-                <Photos paths={value.images} userId={photoUserId} onBusy={onPhotoBusy} onChange={images => update({ images })} />
+                <Photos
+                    paths={value.images}
+                    userId={photoUserId}
+                    onBusy={onPhotoBusy}
+                    onChange={(images) => update({ images })}
+                />
                 <div className="writing-details">
                     <fieldset>
                         <legend>窗外天气</legend>

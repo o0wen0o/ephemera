@@ -159,7 +159,7 @@ export default function App() {
             try {
                 setDrafts(readDrafts());
             } catch {
-                setToast("草稿读取失败，请保留浏览器数据。");
+                setToast("草稿读取失败，请刷新页面重试。");
             }
         };
         refresh();
@@ -314,7 +314,7 @@ export default function App() {
     }, []);
     const persist = (next: Entry[], nextCatalog: Catalog = catalog, nextSync?: SyncMeta) => {
         if (storageError) {
-            notify("请先导出原始备份，再恢复数据，避免覆盖原有日记。");
+            notify("暂时无法保存，请先导出原始备份。");
             return false;
         }
         try {
@@ -335,7 +335,7 @@ export default function App() {
             setSyncMeta(resolvedSync);
             return true;
         } catch {
-            notify("保存失败：浏览器存储空间不足或不可用。请保留此页后重试。");
+            notify("保存失败，本机存储空间不足。请清理后重试。");
             return false;
         }
     };
@@ -355,7 +355,7 @@ export default function App() {
         const next = detachAccount(current);
         const left = next.entries.filter((e) => !isSample(e.id)).length;
         const saved = !current.error && persist(next.entries, next.catalog, next.sync);
-        if (!cleared || !saved) return "已退出，但本机数据没有清干净，请检查浏览器存储权限。";
+        if (!cleared || !saved) return "已退出，但本机数据未清理干净，请检查浏览器设置。";
         return left
             ? `已退出，已同步的日记已从这台设备移除，云端仍保留。${left} 篇未同步的日记留在本机。`
             : "已退出，已同步的日记已从这台设备移除，云端仍保留。";
@@ -469,7 +469,7 @@ export default function App() {
             setMobileNav(false);
             setEditing(pending ?? "new");
         } catch {
-            setToast("草稿读取失败，请保留浏览器数据。");
+            setToast("草稿读取失败，请刷新页面重试。");
         }
     };
     const closeReader = () => setReading(null);
@@ -493,7 +493,7 @@ export default function App() {
                       2
                   );
         } catch {
-            notify("浏览器拒绝读取存储，无法导出。");
+            notify("无法读取本机日记，导出失败。");
             return;
         }
         const url = URL.createObjectURL(new Blob([body], { type: "application/json" }));
@@ -552,7 +552,7 @@ export default function App() {
             } else if (persist(next, nextCatalog, nextSync))
                 notify(`已按版本合并 ${incoming.entries.length} 篇日记。`);
         } catch {
-            notify("无法导入，请使用芸窗导出的有效 JSON 备份。");
+            notify("无法导入，请选择芸窗导出的备份文件。");
         }
     };
     const auth = async () => {
@@ -703,7 +703,7 @@ export default function App() {
                         throw new Error("云端刚刚发生了新的修改，本机内容已保留，请再次同步。");
                 }
                 ensureAccount(session.user.id);
-                if (!plan) throw new Error("无法生成同步计划。");
+                if (!plan) throw new Error("同步失败，请稍后再试。");
                 if (revisionRef.current !== revision) {
                     setCloudMessage("同步期间又有新的本机改动，已保留并会在下一轮继续同步。");
                     return;
@@ -714,17 +714,11 @@ export default function App() {
                     `已同步 ${plan.journal.entries.filter((e) => !isSample(e.id)).length} 篇日记`
                 ];
                 if (plan.conflicts) notes.push(`${plan.conflicts} 处冲突已另存副本`);
-                if (plan.duplicates) notes.push(`${plan.duplicates} 条重复记录已合并`);
                 const message = notes.join("，") + "。";
                 setCloudMessage(message);
-                if (silent && (plan.conflicts || plan.duplicates)) notify(message);
+                if (silent && plan.conflicts) notify(message);
             } catch (e) {
-                const message = cloudError(e);
-                setCloudMessage(
-                    message.includes("deleted_at")
-                        ? "请在 Supabase SQL Editor 运行 supabase/migrations/20260910_sync.sql，再重试同步。"
-                        : message
-                );
+                setCloudMessage(cloudError(e));
             } finally {
                 setBusy(false);
             }
@@ -767,7 +761,7 @@ export default function App() {
         } else {
             setSettings(true);
             setInstallMessage(
-                "电脑：浏览器菜单中选择“安装芸窗”；iPhone：用 Safari 打开，分享 → 添加到主屏幕。需使用 HTTPS 或 localhost。"
+                "电脑：在浏览器菜单中选择「安装芸窗」。iPhone：用 Safari 打开，点分享，选「添加到主屏幕」。"
             );
         }
     };
@@ -1311,7 +1305,7 @@ export default function App() {
                             {!supabase ? (
                                 <>
                                     <Help label="本机模式">
-                                        当前为本机模式，日记保存在这个浏览器。清除浏览器数据会移除日记，请定期导出备份。
+                                        日记只保存在这个浏览器。清除浏览器数据会一并删除，请定期导出备份。
                                     </Help>
                                     <div className="connection-status">
                                         <i />
@@ -1347,7 +1341,7 @@ export default function App() {
                                         </div>
                                     )}
                                     <Help label="同步">
-                                        联网时自动合并本机与云端改动。离线编辑和删除会排队；同一篇在两台设备都修改时，本机版本会另存为「冲突副本」。
+                                        联网时自动同步。离线时的改动会在联网后上传；同一篇在两台设备都改过，本机版本会另存为「冲突副本」。
                                     </Help>
                                     <div className="connection-status">
                                         <i />
@@ -1426,8 +1420,7 @@ export default function App() {
                                 <BookOpen size={18} />
                                 带走你的文字
                                 <Help label="备份">
-                                    导出完整 JSON 备份；导入时按日记 ID
-                                    合并，删除记录和同步状态也会保留。
+                                    导出完整备份文件。导入时会与现有日记合并，不会丢失内容。
                                 </Help>
                             </h3>
                             <div className="button-row">
@@ -1465,7 +1458,7 @@ export default function App() {
                                 <MonitorSmartphone size={18} />
                                 随时打开芸窗
                                 <Help label="安装">
-                                    支持电脑和手机。首次在线打开后，已缓存的应用可离线使用。iPhone
+                                    支持电脑和手机。首次打开后即可离线使用。iPhone
                                     请在 Safari 分享菜单中选择「添加到主屏幕」。
                                 </Help>
                             </h3>
@@ -1609,7 +1602,7 @@ export default function App() {
                     }}
                     onConfirm={() => void signOutNow()}
                 >
-                    已同步到云端的日记会从这台设备移除，云端不受影响，重新登录即可取回。还没同步的改动会保留在本机，下次登录时上传。
+                    已同步的日记会从这台设备移除，云端仍保留，重新登录即可取回。未同步的改动留在本机。
                 </Confirm>
             )}
             {replaceLocal && (
@@ -1622,7 +1615,7 @@ export default function App() {
                     onCancel={closeReplaceLocal}
                     onConfirm={() => void overwriteFromCloud()}
                 >
-                    云端的日记与回收站将替换本机数据，包括重新取回本机清空过的回收站项目。本机未同步的改动将被替换，覆盖前会自动保留一份本机备份。云端内容不会更改。
+                    本机日记将被云端内容替换，未同步的改动会丢失。覆盖前会自动保存一份本机备份。云端内容不变。
                 </Confirm>
             )}
             {emptyTrash && (
@@ -1640,8 +1633,7 @@ export default function App() {
                         }
                     }}
                 >
-                    仅清理这台设备回收站中的 {trash.length}{" "}
-                    篇日记。云端与其他设备的内容保留；尚未同步的删除会先完成软删除同步，再清理本机副本。
+                    仅清空这台设备回收站中的 {trash.length} 篇日记。云端和其他设备不受影响。
                 </Confirm>
             )}
             {toast && (
