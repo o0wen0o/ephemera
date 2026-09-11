@@ -1,7 +1,55 @@
 import { supabase } from "./supabase";
 
-export const PHOTO_BUCKET = "journal-images";
+const PHOTO_BUCKET = "journal-images";
 export const MAX_PHOTOS = 3;
+
+// Photos are stored under `${userId}/`, so the prefix is what makes one yours.
+export const ownsPhoto = (path: string, userId: string) => path.startsWith(userId + "/");
+
+// Cards and the reader share one blob per path: a list of entries would otherwise
+// re-download the same photo for every card that shows it.
+const cache = new Map<string, string>();
+const inFlight = new Map<string, Promise<string>>();
+const CACHE_LIMIT = 30;
+
+export function cachedPhoto(path: string) {
+    return cache.get(path);
+}
+
+export function loadPhoto(path: string, userId: string): Promise<string> {
+    const hit = cache.get(path);
+    if (hit) {
+        // Re-insert so the newest use sits at the end of the eviction order.
+        cache.delete(path);
+        cache.set(path, hit);
+        return Promise.resolve(hit);
+    }
+    const pending = inFlight.get(path);
+    if (pending) return pending;
+    const job = (async () => {
+        if (!supabase || !ownsPhoto(path, userId)) throw Error("图片不可用");
+        const { data, error } = await supabase.storage.from(PHOTO_BUCKET).download(path);
+        if (error || !data) throw Error("图片不可用");
+        const url = URL.createObjectURL(data);
+        cache.set(path, url);
+        // One entry goes in per miss, so at most one falls out.
+        if (cache.size > CACHE_LIMIT) {
+            const oldest = cache.keys().next().value!;
+            URL.revokeObjectURL(cache.get(oldest)!);
+            cache.delete(oldest);
+        }
+        return url;
+    })();
+    inFlight.set(path, job);
+    const settled = () => inFlight.delete(path);
+    job.then(settled, settled);
+    return job;
+}
+
+export function forgetPhotos() {
+    for (const url of cache.values()) URL.revokeObjectURL(url);
+    cache.clear();
+}
 
 export async function compressPhoto(file: File): Promise<Blob> {
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))

@@ -1,4 +1,5 @@
 import { Photos } from "./features/journal/Photos";
+import { forgetPhotos } from "./services/photos";
 import { DraftsPage } from "./features/drafts/DraftsPage";
 import { EntryCard } from "./features/journal/EntryCard";
 import { Confirm } from "./components/Confirm";
@@ -350,6 +351,8 @@ export default function App() {
         setOwner(null);
         setBindAccount(false);
         autoAttemptRef.current = "";
+        // Cached photo blobs belong to the account that just left.
+        forgetPhotos();
         // A sync may have landed while signing out, so detach from stored state, not this closure.
         const current = readJournal();
         const next = detachAccount(current);
@@ -783,6 +786,7 @@ export default function App() {
                                 key={e.id}
                                 order={order}
                                 entry={e}
+                                userId={session?.user.id}
                                 onOpen={() => setReading(e)}
                                 onFavorite={() => favorite(e)}
                                 list={asList}

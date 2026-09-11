@@ -1,10 +1,12 @@
-import { Bookmark } from "lucide-react";
+import { Bookmark, Image as ImageIcon } from "lucide-react";
 import { asDate, type Entry } from "../../data/data";
 import { moodGlyph, weatherIcon } from "../../data/entryMeta";
+import { PhotoStrip } from "./Photos";
 export function EntryCard({
     entry,
     onOpen,
     onFavorite,
+    userId,
     list = false,
     order = 0
 }: {
@@ -12,10 +14,12 @@ export function EntryCard({
     order?: number;
     onOpen: () => void;
     onFavorite: () => void;
+    userId?: string;
     list?: boolean;
 }) {
     const d = asDate(entry.date);
     const WeatherIcon = weatherIcon(entry.weather);
+    const photos = entry.images?.length || 0;
     return (
         <article
             style={{ order }}
@@ -41,6 +45,11 @@ export function EntryCard({
                             </span>
                         </span>
                         <span className="weather">
+                            {photos > 0 && (
+                                <span className="photo-mark">
+                                    <ImageIcon size={12} /> {photos} 张
+                                </span>
+                            )}
                             <WeatherIcon size={13} /> {entry.weather}
                         </span>
                     </div>
@@ -50,11 +59,12 @@ export function EntryCard({
             </button>
             <div className="card-footer">
                 <div className="entry-tags">
+                    {photos > 0 && <PhotoStrip paths={entry.images} userId={userId} />}
                     <span className="mood-tag">
                         {entry.mood ? moodGlyph(entry.mood) : ""} {entry.mood || "未标记心情"}
                     </span>
                     {entry.tags.slice(0, 2).map((t) => (
-                        <span key={t}>#{t}</span>
+                        <span className="tag-chip" key={t}>#{t}</span>
                     ))}
                 </div>
                 <button

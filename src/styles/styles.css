@@ -1248,7 +1248,7 @@ main {
         font-size: 8px;
         gap: 5px;
     }
-    .entry-tags > span:nth-child(3) {
+    .entry-tags .tag-chip ~ .tag-chip {
         display: none;
     }
     .entry-date {
@@ -1413,7 +1413,7 @@ main {
     .entry-date .weekday {
         display: inline;
     }
-    .entry-tags > span:nth-child(3) {
+    .entry-tags .tag-chip ~ .tag-chip {
         display: inline;
     }
     .entry-tags {
