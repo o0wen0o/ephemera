@@ -1,12 +1,12 @@
 import { Help } from "./Help";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Plus, Save, X } from "lucide-react";
-import { type Entry, countWords, localDate, entryValid } from "./data";
+import { type Entry, countWords, localDate } from "./data";
 import { moodGlyph, weatherOptions } from "./entryMeta";
 import { cleanName, NAME_LIMIT, validName } from "./journal";
 import { DatePicker } from "./Calendar";
 
-const DRAFT = "ephemera-draft-v1";
+import { readDrafts, putDraft, removeDraft } from "./drafts";
 
 export function Editor({
     entry,
@@ -23,14 +23,8 @@ export function Editor({
 }) {
     const [value, setValue] = useState<Entry>(() => {
         try {
-            const raw =
-                localStorage.getItem(DRAFT) ?? localStorage.getItem("ephemera-prototype-draft-v1");
-            const draft = JSON.parse(raw || "null");
-            if (
-                entryValid(draft) &&
-                (!entry || (draft.id === entry.id && draft.updated_at >= entry.updated_at))
-            )
-                return draft;
+            const draft = entry && readDrafts().find(d => d.id === entry.id);
+            if (draft) return draft;
         } catch {
             /* Start from the saved entry when draft storage is unavailable. */
         }
@@ -54,26 +48,16 @@ export function Editor({
     const [dirty, setDirty] = useState(false);
     const titleRef = useRef<HTMLInputElement>(null);
     const update = (part: Partial<Entry>) => {
-        setValue((v) => ({ ...v, ...part, updated_at: new Date().toISOString() }));
+        const next = { ...value, ...part, updated_at: new Date().toISOString() };
+        setValue(next);
+        try { putDraft(next); setSaved("草稿已保存 · 本机"); }
+        catch { setSaved("草稿保存失败，请保留此页"); }
         setDirty(true);
         setError("");
     };
     useEffect(() => {
         titleRef.current?.focus();
     }, []);
-    useEffect(() => {
-        if (!dirty) return;
-        // Debounced so a long entry is serialized once per pause instead of once per keystroke.
-        const timer = setTimeout(() => {
-            try {
-                localStorage.setItem(DRAFT, JSON.stringify(value));
-                setSaved("草稿已保存");
-            } catch {
-                setSaved("草稿保存失败，请保留此页");
-            }
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [value, dirty]);
     useEffect(() => {
         const warn = (e: BeforeUnloadEvent) => {
             if (dirty) e.preventDefault();
@@ -118,7 +102,7 @@ export function Editor({
             setDirty(false);
             // A null sentinel prevents a cleared draft from being recovered from the legacy key.
             try {
-                localStorage.setItem(DRAFT, "null");
+                removeDraft(value.id);
             } catch {
                 /* The diary itself is saved. */
             }

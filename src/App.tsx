@@ -1,3 +1,5 @@
+import { cloudError, accountMatches } from "./account";
+import { readDrafts, removeDraft } from "./drafts";
 import { journalFromCloud } from "./sync";
 import { purgeTrash } from "./journal";
 import { Help } from "./Help";
@@ -64,7 +66,7 @@ import {
 import { planSync, syncSignature, validateCloudRows, type SyncPlan } from "./sync";
 import { Editor } from "./Editor";
 import { supabase } from "./supabase";
-type View = "all" | "calendar" | "favorites";
+type View = "all" | "drafts" | "calendar" | "favorites";
 type InstallEvent = Event & {
     prompt: () => Promise<void>;
     userChoice: Promise<{ outcome: string }>;
@@ -95,6 +97,7 @@ const VIEWS: Record<
         emptyBody: "给今天留几句话，往后翻起，便是回忆。",
         emptyAction: "写第一篇日记"
     },
+    drafts: { icon: Pencil, title: "草稿", crumb: "我的草稿", h1: "未完的文字，留待下次。", sub: "那些还在酝酿的日子。", section: "我的草稿", emptyHead: "暂无草稿", emptyBody: "", emptyAction: "写日记" },
     calendar: {
         icon: CalendarDays,
         title: "回顾",
@@ -337,6 +340,13 @@ export default function App() {
     const [organizing, setOrganizing] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [storageError, setStorageError] = useState(initial.error);
+    const [drafts, setDrafts] = useState<Entry[]>(() => { try { return readDrafts(); } catch { return []; } });
+    const [discardDraft, setDiscardDraft] = useState<string | null>(null);
+    useEffect(() => {
+        const refresh = () => { try { setDrafts(readDrafts()); } catch { setToast("草稿读取失败，请保留浏览器数据。"); } };
+        refresh(); window.addEventListener('ephemera-drafts', refresh); window.addEventListener('storage', refresh);
+        return () => { window.removeEventListener('ephemera-drafts', refresh); window.removeEventListener('storage', refresh); };
+    }, []);
     const [view, setView] = useState<View>("all");
     const [query, setQuery] = useState("");
     const [tag, setTag] = useState("");
@@ -359,6 +369,15 @@ export default function App() {
     const [install, setInstall] = useState<InstallEvent | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [email, setEmail] = useState("");
+    const [owner, setOwner] = useState<string | null>(() => { try { return localStorage.getItem(STORE + '-owner'); } catch { return null; } });
+    const [bindAccount, setBindAccount] = useState(false);
+    const [signingOut, setSigningOut] = useState(false);
+    const signingOutRef = useRef(false);
+    const activeUserRef = useRef<string | null>(null);
+    const accountAllowed = !!session && accountMatches(owner, session.user.id);
+    const ensureAccount = (userId: string) => {
+        if (activeUserRef.current !== userId || localStorage.getItem(STORE + '-owner') !== userId) throw new Error('账号已变化，同步已停止，本机内容保留。');
+    };
     const [busy, setBusy] = useState(false);
     const [installMessage, setInstallMessage] = useState("");
     const [cloudMessage, setCloudMessage] = useState("");
@@ -411,11 +430,13 @@ export default function App() {
     }, []);
     useEffect(() => {
         if (!supabase) return;
+        let authChanged = false;
         supabase.auth.getSession().then(({ data, error }) => {
-            if (error) setCloudMessage(error.message);
-            else setSession(data.session);
-        });
-        const { data } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+            if (authChanged) return;
+            if (error) setCloudMessage(cloudError(error));
+            else { activeUserRef.current = data.session?.user.id ?? null; setSession(data.session); }
+        }).catch(error => setCloudMessage(cloudError(error)));
+        const { data } = supabase.auth.onAuthStateChange((_event, s) => { authChanged = true; activeUserRef.current = s?.user.id ?? null; setSession(s); });
         return () => data.subscription.unsubscribe();
     }, []);
     const persist = (next: Entry[], nextCatalog: Catalog = catalog, nextSync?: SyncMeta) => {
@@ -621,7 +642,7 @@ export default function App() {
                 email,
                 options: { emailRedirectTo: location.origin }
             });
-            setCloudMessage(error ? error.message : "登录链接已发送，请到邮箱中打开。");
+            setCloudMessage(error ? cloudError(error) : "登录链接已发送，请到邮箱中打开。");
         } catch {
             setCloudMessage("连接失败，请检查网络后重试。");
         } finally {
@@ -629,7 +650,7 @@ export default function App() {
         }
     };
     const overwriteFromCloud = async () => {
-        if (!supabase || !session || !online || busy || storageError) return;
+        if (!supabase || !session || !online || busy || signingOutRef.current || !accountAllowed || storageError) return;
         const revision = revisionRef.current;
         setBusy(true);
         try {
@@ -641,6 +662,7 @@ export default function App() {
                 rows.push(...(data || []));
                 if (!data || data.length < 500) break;
             }
+            ensureAccount(session.user.id);
             const next = journalFromCloud(rows, catalog);
             if (revision !== revisionRef.current) throw new Error("本机日记刚有改动，请重新确认覆盖。");
             localStorage.setItem(STORE + "-before-cloud", JSON.stringify({ version: 3, entries, catalog, sync: syncMeta }));
@@ -651,7 +673,7 @@ export default function App() {
             setCloudMessage("已用云端覆盖本机，覆盖前的备份已保存。");
         } catch (error) {
             setReplaceLocal(false);
-            setCloudMessage(error instanceof Error ? error.message : "覆盖失败，本机日记未被替换，请重试。");
+            setCloudMessage(cloudError(error));
         } finally { setBusy(false); }
     };
     const exportLocalBackup = () => {
@@ -666,11 +688,12 @@ export default function App() {
     };
     const cloudSync = useCallback(
         async (silent = false) => {
-            if (!supabase || !session || !online || busy) return;
+            if (!supabase || !session || !online || busy || signingOutRef.current || !accountAllowed) return;
             const revision = revisionRef.current;
             setBusy(true);
             if (!silent) setCloudMessage("正在核对本机与云端书页…");
             try {
+                ensureAccount(session.user.id);
                 let plan: SyncPlan | undefined;
                 for (let attempt = 0; attempt < 2; attempt++) {
                     const { data, error } = await supabase
@@ -689,6 +712,7 @@ export default function App() {
                         .map((u) => ({ ...u.row, user_id: userId }));
                     const edits = plan.uploads.filter((u) => u.expectedUpdatedAt);
                     // One insert for every new row, then the compare-and-set edits together: they target distinct ids.
+                    ensureAccount(userId);
                     if (newRows.length) {
                         const { error: insertError } = await supabase
                             .from("entries")
@@ -698,6 +722,7 @@ export default function App() {
                             else throw insertError;
                         }
                     }
+                    ensureAccount(userId);
                     if (!raced && edits.length) {
                         const db = supabase;
                         const results = await Promise.all(
@@ -720,6 +745,7 @@ export default function App() {
                     if (attempt === 1)
                         throw new Error("云端刚刚发生了新的修改，本机内容已保留，请再次同步。");
                 }
+                ensureAccount(session.user.id);
                 if (!plan) throw new Error("无法生成同步计划。");
                 if (revisionRef.current !== revision) {
                     setCloudMessage("同步期间又有新的本机改动，已保留并会在下一轮继续同步。");
@@ -737,7 +763,7 @@ export default function App() {
                 if (silent && (plan.conflicts || plan.duplicates)) notify(message);
             } catch (e) {
                 const message =
-                    e instanceof Error ? e.message : "同步失败，请检查网络、配置与数据库权限。";
+                    cloudError(e);
                 setCloudMessage(
                     message.includes("deleted_at")
                         ? "请在 Supabase SQL Editor 运行 supabase/migrations/20260910_sync.sql，再重试同步。"
@@ -747,16 +773,16 @@ export default function App() {
                 setBusy(false);
             }
         },
-        [session, online, busy, entries, catalog, syncMeta, storageError, syncPulse]
+        [session, online, busy, entries, catalog, syncMeta, storageError, syncPulse, accountAllowed]
     );
     useEffect(() => {
-        if (!supabase || !session || !online || busy || replaceLocal) return;
+        if (!supabase || !session || !online || busy || signingOut || !accountAllowed || replaceLocal) return;
         const signature = syncSignature(session.user.id, syncPulse, { entries, sync: syncMeta });
         if (autoAttemptRef.current === signature) return;
         autoAttemptRef.current = signature;
         const timer = setTimeout(() => void cloudSync(true), 1200);
         return () => clearTimeout(timer);
-    }, [session, online, busy, syncMeta, entries, cloudSync, syncPulse, replaceLocal]);
+    }, [session, online, busy, syncMeta, entries, cloudSync, syncPulse, replaceLocal, accountAllowed, signingOut]);
     const installApp = async () => {
         if (install) {
             await install.prompt();
@@ -931,7 +957,7 @@ export default function App() {
                                 onClick={() => selectView(id)}
                             >
                                 <Icon size={18} />
-                                <span>{VIEWS[id].title}</span>
+                                <span>{VIEWS[id].title}{id === "drafts" && drafts.length > 0 ? " · " + drafts.length : ""}</span>
                             </button>
                         );
                     })}
@@ -1052,7 +1078,33 @@ export default function App() {
                                 entries={entries}
                             />
                         )}
-                        <section className="diary-section">
+                        {view === "drafts" ? <section className="diary-section draft-page">
+                            <div className="section-heading"><div><h2>我的草稿 <Help label="草稿">草稿仅保存在这台设备，不参与云端同步。修改草稿不会改变原日记，直到点击保存日记。</Help></h2><span>{drafts.length} 篇</span></div>                    <div className="view-toggle">
+                        <button
+                            aria-label="卡片视图"
+                            aria-pressed={!list}
+                            className={!list ? "active" : ""}
+                            onClick={() => setList(false)}
+                        >
+                            <LayoutGrid size={16} />
+                        </button>
+                        <button
+                            aria-label="列表视图"
+                            aria-pressed={list}
+                            className={list ? "active" : ""}
+                            onClick={() => setList(true)}
+                        >
+                            <List size={17} />
+                        </button>
+                    </div></div>
+                            <div className={"draft-list" + (list ? " draft-list-rows" : "")}>{drafts.filter(d => (d.title+d.body).toLowerCase().includes(query.toLowerCase())).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)).map(d => <article className="draft-card" key={d.id}>
+                                <div className="draft-meta"><span>{entries.some(e=>e.id===d.id) ? "修改中" : "尚未创建"}</span><time dateTime={d.updated_at}>{new Date(d.updated_at).toLocaleString('zh-CN',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})} 更新</time></div>
+                                <h3>{d.title || "未命名草稿"}</h3><p>{d.body || "还没写下正文"}</p>
+                                <div className="draft-actions"><button className="text-btn" onClick={()=>setEditing(d)}><Pencil size={15}/>继续编辑</button><button className="icon-btn" aria-label={"丢弃草稿："+(d.title || "未命名草稿")} onClick={()=>setDiscardDraft(d.id)}><Trash2 size={16}/></button></div>
+                            </article>)}
+                            {!drafts.length && <div className="empty-state"><Pencil size={28}/><h3>没有未完成的草稿</h3><button className="text-btn" onClick={()=>setEditing("new")}>写一篇日记</button></div>}
+                            {!!drafts.length && !drafts.some(d=>(d.title+d.body).toLowerCase().includes(query.toLowerCase())) && <p>没有找到匹配的草稿。</p>}
+                            </div></section> : <section className="diary-section">
                             {listHeading}
                             {showFilters && (
                                 <section
@@ -1109,7 +1161,7 @@ export default function App() {
                             {filters}
                             {renderCards()}
                             <p className="end-note">— 纸短情长，日子还在继续 —</p>
-                        </section>
+                        </section>}
                     </div>
                     <footer className="page-footer">
                         <span>芸窗 Ephemera</span>
@@ -1120,7 +1172,7 @@ export default function App() {
                                 ? online
                                     ? pendingSync
                                         ? `${pendingSync} 项待同步`
-                                        : "云端已同步"
+                                        : accountAllowed ? "云端已同步" : "同步已暂停"
                                     : "离线记录中"
                                 : "文字存于本机"}
                         </span>
@@ -1161,6 +1213,7 @@ export default function App() {
                     整理
                 </button>
             </nav>
+            {discardDraft && <Confirm label="丢弃草稿" title="丢弃这份草稿？" confirm="丢弃草稿" cancel="继续保留" onCancel={()=>setDiscardDraft(null)} onConfirm={()=>{try{removeDraft(discardDraft);setDiscardDraft(null);}catch{notify("草稿移除失败，请重试。");}}}>只移除这份未保存的草稿，已保存的日记保留。</Confirm>}
             {organizing && (
                 <Modal label="整理书页" onClose={closeOrganizer}>
                     <CollectionManager
@@ -1284,19 +1337,22 @@ export default function App() {
                                         <span>{session.user.email}</span>
                                         <button
                                             className="text-btn signout"
+                                            disabled={busy || signingOut}
                                             onClick={async () => {
-                                                const { error } = await supabase!.auth.signOut();
-                                                setCloudMessage(
-                                                    error
-                                                        ? error.message
-                                                        : "已退出，日记仍保留在本机。"
-                                                );
+                                                if (signingOutRef.current) return;
+                                                signingOutRef.current = true; setSigningOut(true);
+                                                try {
+                                                    const { error } = await supabase!.auth.signOut();
+                                                    setCloudMessage(error ? cloudError(error) : "已退出，日记仍保留在本机。");
+                                                } catch (error) { setCloudMessage(cloudError(error)); }
+                                                finally { signingOutRef.current = false; setSigningOut(false); }
                                             }}
                                         >
                                             <LogOut size={14} />
-                                            退出登录
+                                            {signingOut ? "正在退出…" : "退出登录"}
                                         </button>
                                     </div>
+                                    {!accountAllowed && <div className="cloud-message" role="status">{owner ? "本机日记已关联其他账号。请登录原账号后同步，本机内容仍可编辑。" : "请确认本机日记属于当前账号，再开启同步。"}{!owner && <button className="text-btn" onClick={() => setBindAccount(true)}>关联当前账号</button>}</div>}
                                     <Help label="同步">
                                         联网时自动合并本机与云端改动。离线编辑和删除会排队；同一篇在两台设备都修改时，本机版本会另存为「冲突副本」。
                                     </Help>
@@ -1311,13 +1367,13 @@ export default function App() {
                                     <div className="button-row">
                                         <button
                                             className="outline"
-                                            disabled={busy || !online}
+                                            disabled={busy || !online || signingOut || !accountAllowed}
                                             onClick={() => void cloudSync()}
                                         >
                                             <Upload size={15} />
                                             {busy ? "正在同步…" : "立即同步"}
                                         </button>
-                                        <button className="outline" disabled={busy || !online || !!storageError} onClick={() => setReplaceLocal(true)}><Download size={15}/>用云端覆盖本机</button>
+                                        <button className="outline" disabled={busy || !online || signingOut || !accountAllowed || !!storageError} onClick={() => setReplaceLocal(true)}><Download size={15}/>用云端覆盖本机</button>
                                     </div>
                                 </>
                             ) : (
@@ -1508,6 +1564,10 @@ export default function App() {
                     日记将移入回收站，正文、心情与标签完整保留，随时可以恢复。
                 </Confirm>
             )}
+            {bindAccount && session && <Confirm label="关联账号" title="将本机日记关联此账号？" cancel="暂不关联" confirm="关联并开启同步" onCancel={() => setBindAccount(false)} onConfirm={() => {
+                try { localStorage.setItem(STORE + '-owner', session.user.id); setOwner(session.user.id); setBindAccount(false); setCloudMessage("已关联当前账号。"); }
+                catch { setCloudMessage("无法保存账号关联，请检查浏览器存储权限。"); }
+            }}>确认这些本机日记属于 {session.user.email}。关联后会与该账号的云端日记同步。</Confirm>}
             {replaceLocal && <Confirm label="用云端覆盖本机" title="用云端覆盖本机？" cancel="取消" confirm="确认覆盖本机" disabled={busy || !online} onCancel={closeReplaceLocal} onConfirm={() => void overwriteFromCloud()}>
                 云端的日记与回收站将替换本机数据，包括重新取回本机清空过的回收站项目。本机未同步的改动将被替换，覆盖前会自动保留一份本机备份。云端内容不会更改。
             </Confirm>}
