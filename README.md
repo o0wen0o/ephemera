@@ -6,7 +6,7 @@
 
 ## 启动
 
-Windows 可直接双击 `启动芸窗.cmd`，然后访问：
+Windows 可直接双击 `start.cmd`，然后访问：
 
 <http://localhost:5173/>
 
