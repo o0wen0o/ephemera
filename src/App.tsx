@@ -1,3 +1,4 @@
+import { journalFromCloud } from "./sync";
 import { purgeTrash } from "./journal";
 import { Help } from "./Help";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -346,6 +347,9 @@ export default function App() {
     const [editing, setEditing] = useState<Entry | "new" | null>(null);
     const [reading, setReading] = useState<Entry | null>(null);
     const [settings, setSettings] = useState(false);
+    const [replaceLocal, setReplaceLocal] = useState(false);
+    const closeReplaceLocal = () => { if (!busy) setReplaceLocal(false); };
+    const [hasLocalBackup, setHasLocalBackup] = useState(() => { try { return !!localStorage.getItem(STORE + "-before-cloud"); } catch { return false; } });
     const [emptyTrash, setEmptyTrash] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [mobileNav, setMobileNav] = useState(false);
@@ -624,6 +628,42 @@ export default function App() {
             setBusy(false);
         }
     };
+    const overwriteFromCloud = async () => {
+        if (!supabase || !session || !online || busy || storageError) return;
+        const revision = revisionRef.current;
+        setBusy(true);
+        try {
+            const rows: unknown[] = [];
+            // Fetch every page: Supabase applies a default result limit.
+            for (let offset = 0; ; offset += 500) {
+                const { data, error } = await supabase.from("entries").select("*").eq("user_id", session.user.id).order("id").range(offset, offset + 499);
+                if (error) throw error;
+                rows.push(...(data || []));
+                if (!data || data.length < 500) break;
+            }
+            const next = journalFromCloud(rows, catalog);
+            if (revision !== revisionRef.current) throw new Error("本机日记刚有改动，请重新确认覆盖。");
+            localStorage.setItem(STORE + "-before-cloud", JSON.stringify({ version: 3, entries, catalog, sync: syncMeta }));
+            setHasLocalBackup(true);
+            if (!persist(next.entries, next.catalog, next.sync)) return;
+            autoAttemptRef.current = syncSignature(session.user.id, syncPulse, next);
+            setReplaceLocal(false);
+            setCloudMessage("已用云端覆盖本机，覆盖前的备份已保存。");
+        } catch (error) {
+            setReplaceLocal(false);
+            setCloudMessage(error instanceof Error ? error.message : "覆盖失败，本机日记未被替换，请重试。");
+        } finally { setBusy(false); }
+    };
+    const exportLocalBackup = () => {
+        try {
+            const body = localStorage.getItem(STORE + "-before-cloud");
+            if (!body) return;
+            const url = URL.createObjectURL(new Blob([body], { type: "application/json" }));
+            const link = document.createElement("a");
+            link.href = url; link.download = "芸窗-覆盖前本机备份.json"; link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch { notify("备份读取失败，请重试。"); }
+    };
     const cloudSync = useCallback(
         async (silent = false) => {
             if (!supabase || !session || !online || busy) return;
@@ -710,13 +750,13 @@ export default function App() {
         [session, online, busy, entries, catalog, syncMeta, storageError, syncPulse]
     );
     useEffect(() => {
-        if (!supabase || !session || !online || busy) return;
+        if (!supabase || !session || !online || busy || replaceLocal) return;
         const signature = syncSignature(session.user.id, syncPulse, { entries, sync: syncMeta });
         if (autoAttemptRef.current === signature) return;
         autoAttemptRef.current = signature;
         const timer = setTimeout(() => void cloudSync(true), 1200);
         return () => clearTimeout(timer);
-    }, [session, online, busy, syncMeta, entries, cloudSync, syncPulse]);
+    }, [session, online, busy, syncMeta, entries, cloudSync, syncPulse, replaceLocal]);
     const installApp = async () => {
         if (install) {
             await install.prompt();
@@ -1277,6 +1317,7 @@ export default function App() {
                                             <Upload size={15} />
                                             {busy ? "正在同步…" : "立即同步"}
                                         </button>
+                                        <button className="outline" disabled={busy || !online || !!storageError} onClick={() => setReplaceLocal(true)}><Download size={15}/>用云端覆盖本机</button>
                                     </div>
                                 </>
                             ) : (
@@ -1305,6 +1346,7 @@ export default function App() {
                                     </form>
                                 </>
                             )}
+                            {hasLocalBackup && <button className="text-btn" onClick={exportLocalBackup}>导出覆盖前备份</button>}
                             {cloudMessage && (
                                 <p className="cloud-message" role="status">
                                     {cloudMessage}
@@ -1466,12 +1508,15 @@ export default function App() {
                     日记将移入回收站，正文、心情与标签完整保留，随时可以恢复。
                 </Confirm>
             )}
+            {replaceLocal && <Confirm label="用云端覆盖本机" title="用云端覆盖本机？" cancel="取消" confirm="确认覆盖本机" disabled={busy || !online} onCancel={closeReplaceLocal} onConfirm={() => void overwriteFromCloud()}>
+                云端的日记与回收站将替换本机数据，包括重新取回本机清空过的回收站项目。本机未同步的改动将被替换，覆盖前会自动保留一份本机备份。云端内容不会更改。
+            </Confirm>}
             {emptyTrash && (
                 <Confirm
                     label="清空回收站"
                     title="清空回收站？"
                     cancel="取消"
-                    confirm="永久清空"
+                    confirm="清空本机回收站"
                     disabled={busy}
                     onCancel={closeEmptyTrash}
                     onConfirm={() => {
@@ -1481,8 +1526,8 @@ export default function App() {
                         }
                     }}
                 >
-                    将永久清除回收站中的 {trash.length}{" "}
-                    篇日记，无法恢复。联网后同步清除云端内容，已导出的备份不受影响。
+                    仅清理这台设备回收站中的 {trash.length}{" "}
+                    篇日记。云端与其他设备的内容保留；尚未同步的删除会先完成软删除同步，再清理本机副本。
                 </Confirm>
             )}
             {toast && (

@@ -133,19 +133,37 @@ test('a remote edit wins over a concurrent local deletion and is surfaced as a c
   assert.equal(plan.journal.entries[0].body, '另一台设备刚写的正文');
 });
 
-test('empty trash removes content locally and remotely while retaining deletion markers', () => {
- const deletedAt='2026-09-10T02:00:00.000Z', now='2026-09-10T04:00:00.000Z';
+test('empty trash stays local across reload and sync, and retains pending cloud content', () => {
+ const deletedAt='2026-09-10T02:00:00.000Z';
  const cloud={...entry,updated_at:deletedAt,deleted_at:deletedAt};
  const source=journalOf({bases:{[entry.id]:deletedAt},tombstones:[{entry,deleted_at:deletedAt}]});
- const sync=purgeTrash(source.sync,now);
- assert.equal(source.sync.tombstones[0].entry.body,entry.body);
- assert.equal(sync.tombstones[0].entry.body,'');
- const plan=planSync({...source,sync},[cloud]);
- assert.equal(plan.uploads[0].row.body,'');
- assert.equal(plan.uploads[0].row.deleted_at,now);
- assert.deepEqual(plan.uploads[0].row.tags,[]);
- const other=planSync(source,[plan.uploads[0].row]);
- assert.equal(other.journal.sync.tombstones[0].entry.body,'');
- assert.equal(other.journal.entries.length,0);
- assert.deepEqual(purgeTrash(plan.journal.sync,now),plan.journal.sync);
+ const sync=purgeTrash(source.sync);
+ assert.equal(sync.tombstones.length,0);
+ assert.deepEqual(sync.dirtyIds,source.sync.dirtyIds);
+ const reloaded=parseJournal(JSON.stringify({...source,sync}));
+ const plan=planSync(reloaded,[cloud]);
+ assert.equal(plan.uploads.length,0);
+ assert.equal(plan.journal.sync.tombstones.length,0);
+ assert.equal(planSync(source,[cloud]).journal.sync.tombstones[0].entry.body,entry.body);
+ const pending=purgeTrash({...source.sync,dirtyIds:[entry.id]});
+ assert.equal(pending.tombstones[0].entry.body,entry.body);
+ const uploaded=planSync({...source,sync:pending},[]);
+ assert.equal(uploaded.uploads[0].row.body,entry.body);
+ assert.equal(uploaded.journal.sync.tombstones.length,0);
+ assert.equal(planSync(uploaded.journal,uploaded.uploads.map(u=>u.row)).journal.sync.tombstones.length,0);
+ assert.deepEqual(purgeTrash(plan.journal.sync),plan.journal.sync);
+});
+
+test('cloud replacement includes cloud trash and removes local exclusions and pending edits', async () => {
+ const { journalFromCloud } = await server.ssrLoadModule('/src/sync.ts');
+ const deleted={...entry,id:'deleted',deleted_at:'2026-09-10T04:00:00.000Z'};
+ const rows=[{...entry,deleted_at:null},deleted];
+ const snapshot=journalFromCloud(rows,{tags:[],moods:[]});
+ assert.deepEqual(snapshot.entries,[entry]);
+ assert.equal(snapshot.sync.tombstones[0].entry.body,entry.body);
+ assert.deepEqual(snapshot.sync.dirtyIds,[]);
+ assert.equal(snapshot.sync.clearedTrash,undefined);
+ assert.equal(planSync(snapshot,rows).uploads.length,0);
+ assert.equal(journalFromCloud([],{tags:[],moods:[]}).entries.length,0);
+ assert.throws(()=>journalFromCloud([{}],{tags:[],moods:[]}));
 });

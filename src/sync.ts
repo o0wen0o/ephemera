@@ -144,11 +144,15 @@ export function planSync(
         }
     }
 
+    for (const [id, tombstone] of tombstones) {
+        const cleared = source.sync.clearedTrash?.[id];
+        if (cleared && Date.parse(tombstone.deleted_at) <= Date.parse(cleared) && !dirty.has(id)) tombstones.delete(id);
+    }
     return {
         journal: {
             entries: [...samples, ...local.values()],
             catalog: source.catalog,
-            sync: { dirtyIds: [...dirty], tombstones: [...tombstones.values()], bases }
+            sync: { ...source.sync, dirtyIds: [...dirty], tombstones: [...tombstones.values()], bases }
         },
         uploads,
         conflicts,
@@ -169,4 +173,18 @@ export function syncSignature(
     const stamps = journal.entries.filter((e) => dirty.has(e.id)).map((e) => e.updated_at);
     const graves = journal.sync.tombstones.map((t) => `${t.entry.id}@${t.deleted_at}`);
     return [userId, pulse, [...dirty].join(","), stamps.join(","), graves.join(",")].join("|");
+}
+
+/** A read-only cloud snapshot replaces local diaries and clears this device's trash exclusions. */
+export function journalFromCloud(rows: unknown[], catalog: Journal["catalog"]): Journal {
+    const records = [...latestById(validateCloudRows(rows), row => row.id, stamp).values()];
+    return {
+        entries: records.filter(row => !row.deleted_at).map(asEntry),
+        catalog,
+        sync: {
+            dirtyIds: [],
+            tombstones: records.filter(row => !!row.deleted_at).map(row => ({ entry: asEntry(row), deleted_at: row.deleted_at! })),
+            bases: Object.fromEntries(records.map(row => [row.id, stamp(row)]))
+        }
+    };
 }
