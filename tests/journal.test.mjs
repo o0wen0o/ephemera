@@ -4,10 +4,10 @@ import { createServer } from 'vite';
 
 const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [], entries: [] }, server: { middlewareMode: true }, appType: 'custom' });
 after(() => server.close());
-const { parseJournal, changeCollection, collectionNames, readJournal, trackLocalChanges, defaultSync, purgeTrash, STORE } = await server.ssrLoadModule('/src/journal.ts');
+const { parseJournal, changeCollection, collectionNames, readJournal, trackLocalChanges, defaultSync, purgeTrash, STORE } = await server.ssrLoadModule('/src/data/journal.ts');
 // One journal literal so a new SyncMeta field does not have to be added to every test.
 const journalOf = ({ entries = [], catalog = { tags: [], moods: [] }, ...sync }) => ({ entries, catalog, sync: { dirtyIds: [], tombstones: [], bases: {}, ...sync } });
-const { planSync } = await server.ssrLoadModule('/src/sync.ts');
+const { planSync } = await server.ssrLoadModule('/src/services/sync.ts');
 const entry = { id: 'test-only', title: '测试书页', body: '保留正文', date: '2026-09-10', mood: '开心', weather: '晴天', tags: ['阅读', '日常'], favorite: true, updated_at: '2026-09-09T00:00:00.000Z' };
 const fixture = () => ({ entries: [structuredClone(entry), { ...structuredClone(entry), id: 'unrelated', tags: ['散步'], mood: '平静' }], catalog: { tags: ['阅读', '日常', '散步', '尚未使用'], moods: ['开心', '平静'] }, sync: defaultSync() });
 
@@ -155,7 +155,7 @@ test('empty trash stays local across reload and sync, and retains pending cloud 
 });
 
 test('cloud replacement includes cloud trash and removes local exclusions and pending edits', async () => {
- const { journalFromCloud } = await server.ssrLoadModule('/src/sync.ts');
+ const { journalFromCloud } = await server.ssrLoadModule('/src/services/sync.ts');
  const deleted={...entry,id:'deleted',deleted_at:'2026-09-10T04:00:00.000Z'};
  const rows=[{...entry,deleted_at:null},deleted];
  const snapshot=journalFromCloud(rows,{tags:[],moods:[]});
@@ -170,7 +170,7 @@ test('cloud replacement includes cloud trash and removes local exclusions and pe
 
 
 test('draft migration, independent updates and discard preserve other drafts', async () => {
- const { readDrafts, putDraft, removeDraft } = await server.ssrLoadModule('/src/drafts.ts');
+ const { readDrafts, putDraft, removeDraft } = await server.ssrLoadModule('/src/data/drafts.ts');
  const previousStorage=globalThis.localStorage, previousWindow=globalThis.window;
  const values=new Map([['ephemera-draft-v1',JSON.stringify(entry)]]);
  globalThis.localStorage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
@@ -194,7 +194,7 @@ test('draft migration, independent updates and discard preserve other drafts', a
 
 
 test('account guard requires an explicit matching owner and errors are readable', async () => {
- const { accountMatches, cloudError } = await server.ssrLoadModule('/src/account.ts');
+ const { accountMatches, cloudError } = await server.ssrLoadModule('/src/services/account.ts');
  assert.equal(accountMatches(null,'account-a'),false);
  assert.equal(accountMatches('account-a','account-b'),false);
  assert.equal(accountMatches('account-a','account-a'),true);

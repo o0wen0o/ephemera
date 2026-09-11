@@ -1,9 +1,14 @@
-import { cloudError, accountMatches } from "./account";
-import { readDrafts, removeDraft } from "./drafts";
-import { journalFromCloud } from "./sync";
-import { purgeTrash } from "./journal";
-import { Help } from "./Help";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { DraftsPage } from "./features/drafts/DraftsPage";
+import { EntryCard } from "./features/journal/EntryCard";
+import { Confirm } from "./components/Confirm";
+import { Modal } from "./components/Modal";
+import { Botanical } from "./components/Botanical";
+import { cloudError, accountMatches } from "./services/account";
+import { readDrafts, removeDraft } from "./data/drafts";
+import { journalFromCloud } from "./services/sync";
+import { purgeTrash } from "./data/journal";
+import { Help } from "./components/Help";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     BookOpen,
     CalendarDays,
@@ -37,16 +42,15 @@ import type { Session } from "@supabase/supabase-js";
 import { registerSW } from "virtual:pwa-register";
 import {
     type Entry,
-    asDate,
     countWords,
     displayDate,
     isSample,
     localDate,
     thisMonth
-} from "./data";
-import { moodGlyph, weatherIcon } from "./entryMeta";
-import { Calendar } from "./Calendar";
-import { CollectionManager } from "./CollectionManager";
+} from "./data/data";
+
+import { Calendar } from "./components/Calendar";
+import { CollectionManager } from "./features/collections/CollectionManager";
 import {
     STORE,
     readJournal,
@@ -62,10 +66,10 @@ import {
     type Catalog,
     type CollectionKind,
     type SyncMeta
-} from "./journal";
-import { planSync, syncSignature, validateCloudRows, type SyncPlan } from "./sync";
-import { Editor } from "./Editor";
-import { supabase } from "./supabase";
+} from "./data/journal";
+import { planSync, syncSignature, validateCloudRows, type SyncPlan } from "./services/sync";
+import { Editor } from "./features/journal/Editor";
+import { supabase } from "./services/supabase";
 type View = "all" | "drafts" | "calendar" | "favorites";
 type InstallEvent = Event & {
     prompt: () => Promise<void>;
@@ -128,210 +132,10 @@ const HEADING_FMT = new Intl.DateTimeFormat("zh-CN", {
     day: "numeric",
     weekday: "long"
 });
-function Botanical({ small = false }: { small?: boolean }) {
-    return (
-        <svg
-            className={small ? "botanical small" : "botanical"}
-            viewBox="0 0 320 290"
-            fill="none"
-            aria-hidden="true"
-        >
-            <g stroke="currentColor" strokeWidth="1.1">
-                <path d="M138 293C159 227 175 155 153 54M159 196C213 163 231 110 251 66M159 211C113 175 98 137 73 102M166 150C195 122 197 81 199 42M145 268C195 245 227 212 258 185" />
-                <path
-                    d="M153 55C113 29 125 4 128 7C167 20 161 39 153 55ZM160 95C112 90 116 59 115 57C151 57 167 77 160 95ZM165 128C135 122 115 105 122 88C154 88 166 109 165 128ZM163 151C185 133 187 105 176 97C155 107 153 134 163 151ZM164 185C120 177 117 158 120 145C154 144 166 163 164 185ZM196 159C222 164 245 146 242 134C214 132 200 145 196 159ZM221 122C201 102 208 78 218 74C238 92 229 111 221 122ZM240 90C267 86 281 64 273 53C250 57 239 70 240 90ZM250 66C232 44 245 26 249 21C268 41 260 58 250 66ZM199 64C177 42 190 23 199 15C216 38 207 54 199 64ZM191 105C211 104 225 87 224 70C201 73 189 85 191 105ZM110 165C82 172 59 152 61 143C86 136 104 150 110 165ZM91 134C113 115 98 97 96 89C76 104 80 123 91 134ZM76 107C47 103 44 81 46 72C71 77 79 90 76 107ZM199 237C201 216 222 202 234 210C229 229 212 239 199 237ZM228 215C252 224 270 211 273 202C254 192 237 204 228 215ZM255 189C250 167 269 153 278 155C280 175 265 188 255 189Z"
-                    fill="currentColor"
-                    fillOpacity=".10"
-                />
-            </g>
-        </svg>
-    );
-}
-function Modal({
-    children,
-    onClose,
-    label,
-    wide = false
-}: {
-    children: ReactNode;
-    onClose: () => void;
-    label: string;
-    wide?: boolean;
-}) {
-    const ref = useRef<HTMLDivElement>(null);
-    // Held in a ref so the focus trap arms once per dialog; re-running it would steal focus mid-edit.
-    const closeRef = useRef(onClose);
-    closeRef.current = onClose;
-    useEffect(() => {
-        const prev = document.activeElement as HTMLElement;
-        const old = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
-        if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
-        const key = (e: KeyboardEvent) => {
-            if (e.key !== "Escape" && e.key !== "Tab") return;
-            if (
-                e.defaultPrevented ||
-                Array.from(document.querySelectorAll('[role="dialog"]')).at(-1) !== ref.current
-            )
-                return;
-            if (e.key === "Escape") closeRef.current();
-            if (e.key === "Tab") {
-                const nodes = Array.from(
-                    ref.current?.querySelectorAll<HTMLElement>(
-                        'button,input,textarea,select,a[href],[tabindex="0"]'
-                    ) || []
-                ).filter(
-                    (el) =>
-                        !el.hasAttribute("disabled") && el.offsetParent !== null && el.tabIndex >= 0
-                );
-                const first = nodes[0],
-                    last = nodes.at(-1);
-                if (
-                    e.shiftKey &&
-                    (document.activeElement === first || document.activeElement === ref.current)
-                ) {
-                    e.preventDefault();
-                    last?.focus();
-                } else if (
-                    !e.shiftKey &&
-                    (document.activeElement === last || document.activeElement === ref.current)
-                ) {
-                    e.preventDefault();
-                    first?.focus();
-                }
-            }
-        };
-        document.addEventListener("keydown", key);
-        return () => {
-            document.body.style.overflow = old;
-            document.removeEventListener("keydown", key);
-            prev?.focus();
-        };
-    }, []);
-    return (
-        <div
-            className="modal-backdrop"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) onClose();
-            }}
-        >
-            <div
-                ref={ref}
-                className={"modal " + (wide ? "wide" : "")}
-                role="dialog"
-                aria-modal="true"
-                aria-label={label}
-                tabIndex={-1}
-            >
-                {children}
-            </div>
-        </div>
-    );
-}
-function Confirm({
-    label,
-    title,
-    cancel,
-    confirm,
-    onCancel,
-    onConfirm,
-    disabled = false,
-    children
-}: {
-    label: string;
-    title: string;
-    cancel: string;
-    confirm: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    disabled?: boolean;
-    children: ReactNode;
-}) {
-    return (
-        <Modal label={label} onClose={onCancel}>
-            <div className="confirm-dialog">
-                <Trash2 size={25} />
-                <h2>{title}</h2>
-                <p>{children}</p>
-                <div className="button-row">
-                    <button className="outline" onClick={onCancel}>
-                        {cancel}
-                    </button>
-                    <button className="danger" disabled={disabled} onClick={onConfirm}>
-                        {confirm}
-                    </button>
-                </div>
-            </div>
-        </Modal>
-    );
-}
-function EntryCard({
-    entry,
-    onOpen,
-    onFavorite,
-    list = false,
-    order = 0
-}: {
-    entry: Entry;
-    order?: number;
-    onOpen: () => void;
-    onFavorite: () => void;
-    list?: boolean;
-}) {
-    const d = asDate(entry.date);
-    const WeatherIcon = weatherIcon(entry.weather);
-    return (
-        <article
-            style={{ order }}
-            className={"entry-card " + (entry.cover ? "featured " : "") + (list ? "list-card" : "")}
-        >
-            <button className="card-open" onClick={onOpen} aria-label={"阅读：" + entry.title}>
-                {entry.cover && (
-                    <div className="entry-cover">
-                        <img src="/garden.jpg" alt="阳光穿过茂密的绿色森林" />
-                        <span>把生活，过成喜欢的样子。</span>
-                    </div>
-                )}
-                <div className="card-content">
-                    <div className="entry-date">
-                        <span>
-                            {d.getMonth() + 1} 月 {d.getDate()} 日{" "}
-                            <span className="weekday">
-                                {
-                                    ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][
-                                        d.getDay()
-                                    ]
-                                }
-                            </span>
-                        </span>
-                        <span className="weather">
-                            <WeatherIcon size={13} /> {entry.weather}
-                        </span>
-                    </div>
-                    <h3>{entry.title}</h3>
-                    <p>{entry.body}</p>
-                </div>
-            </button>
-            <div className="card-footer">
-                <div className="entry-tags">
-                    <span className="mood-tag">
-                        {entry.mood ? moodGlyph(entry.mood) : ""} {entry.mood || "未标记心情"}
-                    </span>
-                    {entry.tags.slice(0, 2).map((t) => (
-                        <span key={t}>#{t}</span>
-                    ))}
-                </div>
-                <button
-                    className={"icon-btn bookmark " + (entry.favorite ? "active" : "")}
-                    aria-label={(entry.favorite ? "取消收藏：" : "收藏：") + entry.title}
-                    onClick={onFavorite}
-                >
-                    <Bookmark size={16} fill={entry.favorite ? "currentColor" : "none"} />
-                </button>
-            </div>
-        </article>
-    );
-}
+
+
+
+
 export default function App() {
     const initial = useMemo(readJournal, []);
     const [entries, setEntries] = useState<Entry[]>(initial.entries);
@@ -1078,33 +882,7 @@ export default function App() {
                                 entries={entries}
                             />
                         )}
-                        {view === "drafts" ? <section className="diary-section draft-page">
-                            <div className="section-heading"><div><h2>我的草稿 <Help label="草稿">草稿仅保存在这台设备，不参与云端同步。修改草稿不会改变原日记，直到点击保存日记。</Help></h2><span>{drafts.length} 篇</span></div>                    <div className="view-toggle">
-                        <button
-                            aria-label="卡片视图"
-                            aria-pressed={!list}
-                            className={!list ? "active" : ""}
-                            onClick={() => setList(false)}
-                        >
-                            <LayoutGrid size={16} />
-                        </button>
-                        <button
-                            aria-label="列表视图"
-                            aria-pressed={list}
-                            className={list ? "active" : ""}
-                            onClick={() => setList(true)}
-                        >
-                            <List size={17} />
-                        </button>
-                    </div></div>
-                            <div className={"draft-list" + (list ? " draft-list-rows" : "")}>{drafts.filter(d => (d.title+d.body).toLowerCase().includes(query.toLowerCase())).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)).map(d => <article className="draft-card" key={d.id}>
-                                <div className="draft-meta"><span>{entries.some(e=>e.id===d.id) ? "修改中" : "尚未创建"}</span><time dateTime={d.updated_at}>{new Date(d.updated_at).toLocaleString('zh-CN',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})} 更新</time></div>
-                                <h3>{d.title || "未命名草稿"}</h3><p>{d.body || "还没写下正文"}</p>
-                                <div className="draft-actions"><button className="text-btn" onClick={()=>setEditing(d)}><Pencil size={15}/>继续编辑</button><button className="icon-btn" aria-label={"丢弃草稿："+(d.title || "未命名草稿")} onClick={()=>setDiscardDraft(d.id)}><Trash2 size={16}/></button></div>
-                            </article>)}
-                            {!drafts.length && <div className="empty-state"><Pencil size={28}/><h3>没有未完成的草稿</h3><button className="text-btn" onClick={()=>setEditing("new")}>写一篇日记</button></div>}
-                            {!!drafts.length && !drafts.some(d=>(d.title+d.body).toLowerCase().includes(query.toLowerCase())) && <p>没有找到匹配的草稿。</p>}
-                            </div></section> : <section className="diary-section">
+                        {view === "drafts" ? <DraftsPage drafts={drafts} entries={entries} query={query} list={list} setList={setList} setEditing={setEditing} setDiscardDraft={setDiscardDraft} /> : <section className="diary-section">
                             {listHeading}
                             {showFilters && (
                                 <section

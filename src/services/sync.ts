@@ -1,5 +1,5 @@
-import { entryValid, isSample, type Entry } from "./data";
-import { dedupeEntries, latestById, type Journal, type SyncMeta, type Tombstone } from "./journal";
+import { entryValid, isSample, type Entry } from "../data/data";
+import { dedupeEntries, latestById, type Journal, type SyncMeta, type Tombstone } from "../data/journal";
 
 export type CloudEntry = Entry & { user_id?: string; deleted_at?: string | null };
 export type SyncUpload = { row: CloudEntry; expectedUpdatedAt: string | null };

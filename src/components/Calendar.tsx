@@ -1,7 +1,7 @@
 import { Help } from "./Help";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { asDate, displayDate, localDate, monthStart, thisMonth, type Entry } from "./data";
+import { asDate, displayDate, localDate, monthStart, thisMonth, type Entry } from "../data/data";
 
 export function Calendar({
     value,

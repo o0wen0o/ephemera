@@ -1,8 +1,8 @@
-import { Help } from "./Help";
+import { Help } from "../../components/Help";
 import { useMemo, useState } from "react";
 import { Check, Hash, Heart, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { cleanName, NAME_LIMIT, validName, type CollectionKind } from "./journal";
-import type { Entry } from "./data";
+import { cleanName, NAME_LIMIT, validName, type CollectionKind } from "../../data/journal";
+import type { Entry } from "../../data/data";
 
 // One table per collection kind, so a third kind is a new entry here rather than eight ternaries.
 const KINDS = {

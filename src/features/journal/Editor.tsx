@@ -1,12 +1,12 @@
-import { Help } from "./Help";
+import { Help } from "../../components/Help";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Plus, Save, X } from "lucide-react";
-import { type Entry, countWords, localDate } from "./data";
-import { moodGlyph, weatherOptions } from "./entryMeta";
-import { cleanName, NAME_LIMIT, validName } from "./journal";
-import { DatePicker } from "./Calendar";
+import { type Entry, countWords, localDate } from "../../data/data";
+import { moodGlyph, weatherOptions } from "../../data/entryMeta";
+import { cleanName, NAME_LIMIT, validName } from "../../data/journal";
+import { DatePicker } from "../../components/Calendar";
 
-import { readDrafts, putDraft, removeDraft } from "./drafts";
+import { readDrafts, putDraft, removeDraft } from "../../data/drafts";
 
 export function Editor({
     entry,
