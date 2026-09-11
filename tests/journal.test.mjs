@@ -97,8 +97,8 @@ test("malformed data fails closed instead of seeding or overwriting it", () => {
     for (const data of ["null", "{}", "oops", '{"entries":[],"catalog":{"tags":3,"moods":[]}}'])
         assert.throws(() => parseJournal(data));
 });
-test("storage migration reads old records without writing, prefers v2, and retains original on errors", () => {
-    const storage = new Map([["ephemera-entries-v1", JSON.stringify([entry])]]);
+test("journal storage reads without writing and preserves malformed data", () => {
+    const storage = new Map([[STORE, JSON.stringify([entry])]]);
     globalThis.localStorage = {
         getItem: (key) => storage.get(key) ?? null,
         setItem: () => {
@@ -111,7 +111,7 @@ test("storage migration reads old records without writing, prefers v2, and retai
     assert.deepEqual(readJournal().entries, []);
     storage.set(STORE, "broken");
     assert.ok(readJournal().error);
-    assert.equal(storage.get("ephemera-entries-v1"), JSON.stringify([entry]));
+    assert.equal(storage.get(STORE), "broken");
     delete globalThis.localStorage;
 });
 
@@ -262,11 +262,11 @@ test("cloud replacement includes cloud trash and removes local exclusions and pe
     assert.throws(() => journalFromCloud([{}], { tags: [], moods: [] }));
 });
 
-test("draft migration, independent updates and discard preserve other drafts", async () => {
+test("draft storage, independent updates and discard preserve other drafts", async () => {
     const { readDrafts, putDraft, removeDraft } = await server.ssrLoadModule("/src/data/drafts.ts");
     const previousStorage = globalThis.localStorage,
         previousWindow = globalThis.window;
-    const values = new Map([["ephemera-draft-v1", JSON.stringify(entry)]]);
+    const values = new Map([["ephemera-drafts", JSON.stringify([entry])]]);
     globalThis.localStorage = {
         getItem: (key) => values.get(key) ?? null,
         setItem: (key, value) => values.set(key, value)
@@ -283,9 +283,9 @@ test("draft migration, independent updates and discard preserve other drafts", a
         assert.equal(entry.body, "保留正文");
         removeDraft("new-draft");
         assert.deepEqual(readDrafts(), []);
-        values.set("ephemera-drafts-v2", "broken");
+        values.set("ephemera-drafts", "broken");
         assert.throws(() => putDraft(entry));
-        assert.equal(values.get("ephemera-drafts-v2"), "broken");
+        assert.equal(values.get("ephemera-drafts"), "broken");
     } finally {
         globalThis.localStorage = previousStorage;
         globalThis.window = previousWindow;

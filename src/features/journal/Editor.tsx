@@ -100,7 +100,6 @@ export function Editor({
             })
         ) {
             setDirty(false);
-            // A null sentinel prevents a cleared draft from being recovered from the legacy key.
             try {
                 removeDraft(value.id);
             } catch {

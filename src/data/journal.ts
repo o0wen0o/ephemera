@@ -1,6 +1,6 @@
 import { blankEntryFields, entryValid, isSample, moods, seeds, type Entry } from "./data";
 
-export const STORE = "ephemera-journal-v2";
+export const STORE = "ephemera-journal";
 export type CollectionKind = "tags" | "moods";
 export type Catalog = { tags: string[]; moods: string[] };
 export type Tombstone = { entry: Entry; deleted_at: string };
@@ -49,7 +49,14 @@ export const mergeTombstones = (...groups: Tombstone[][]) => [
 ];
 /** Tombstones that still hold recoverable content — the contract between the recycle list and purging. */
 export const trashedTombstones = (sync: SyncMeta) =>
-    sync.tombstones.filter((t) => (t.entry.title || t.entry.body) && !(sync.clearedTrash?.[t.entry.id] && Date.parse(t.deleted_at) <= Date.parse(sync.clearedTrash[t.entry.id])));
+    sync.tombstones.filter(
+        (t) =>
+            (t.entry.title || t.entry.body) &&
+            !(
+                sync.clearedTrash?.[t.entry.id] &&
+                Date.parse(t.deleted_at) <= Date.parse(sync.clearedTrash[t.entry.id])
+            )
+    );
 
 const syncValid = (value: unknown): value is SyncMeta => {
     if (!value || typeof value !== "object") return false;
@@ -59,7 +66,10 @@ const syncValid = (value: unknown): value is SyncMeta => {
         sync.dirtyIds.every((id) => typeof id === "string") &&
         Array.isArray(sync.tombstones) &&
         sync.tombstones.every((t) => entryValid(t?.entry) && typeof t.deleted_at === "string") &&
-        (sync.clearedTrash === undefined || (!!sync.clearedTrash && typeof sync.clearedTrash === "object" && Object.values(sync.clearedTrash).every(v => typeof v === "string"))) &&
+        (sync.clearedTrash === undefined ||
+            (!!sync.clearedTrash &&
+                typeof sync.clearedTrash === "object" &&
+                Object.values(sync.clearedTrash).every((v) => typeof v === "string"))) &&
         !!sync.bases &&
         typeof sync.bases === "object" &&
         Object.values(sync.bases).every((v) => typeof v === "string")
@@ -107,11 +117,7 @@ export function parseJournal(text: string): Journal {
 }
 
 export function readRawJournal() {
-    return (
-        localStorage.getItem(STORE) ??
-        localStorage.getItem("ephemera-entries-v1") ??
-        localStorage.getItem("ephemera-prototype-entries-v1")
-    );
+    return localStorage.getItem(STORE);
 }
 
 export function readJournal(): Journal & { error: string } {
@@ -204,7 +210,10 @@ export function purgeTrash(sync: SyncMeta): SyncMeta {
     const clearedTrash = { ...sync.clearedTrash };
     for (const t of targets) clearedTrash[t.entry.id] = t.deleted_at;
     return {
-        ...sync, clearedTrash,
-        tombstones: sync.tombstones.filter(t => !clearedTrash[t.entry.id] || sync.dirtyIds.includes(t.entry.id))
+        ...sync,
+        clearedTrash,
+        tombstones: sync.tombstones.filter(
+            (t) => !clearedTrash[t.entry.id] || sync.dirtyIds.includes(t.entry.id)
+        )
     };
 }
