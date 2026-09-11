@@ -2,8 +2,6 @@
 
 一款草木绿、纸页感、略带复古气息的日记 PWA，使用 React + TypeScript + Vite + Supabase，支持电脑与手机。日记优先保存在本机，登录并关联账号后可在设备之间同步。
 
-[在线使用](https://ephemera-umber.vercel.app/)
-
 ## 功能
 
 - **日记**：新建、编辑、阅读、搜索、收藏，支持卡片与列表展示，以及标签、心情、日期组合筛选。
@@ -107,7 +105,7 @@ PWA 缓存应通过生产构建预览或 HTTPS 部署验证。首次联网加载
 | Install Command | 自动检测仓库中的 pnpm 锁文件 |
 | 环境变量 | `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY` |
 
-环境变量按需应用到 Production 和 Preview，修改后需要重新部署。当前正式站为 [ephemera-umber.vercel.app](https://ephemera-umber.vercel.app/)。
+环境变量按需应用到 Production 和 Preview，修改后需要重新部署。
 
 Supabase 的 Site URL 设置为正式站地址，Redirect URLs 加入正式站地址及本地开发地址。若要在预览部署中使用邮箱登录，也需允许对应的预览地址。项目使用当前页面的 origin 作为邮箱登录回跳地址。
 
@@ -137,3 +135,15 @@ tests/                       数据与同步回归测试
 ## 素材
 
 森林封面使用本地资源 `public/garden.jpg`，来自 Unsplash。字体为 Noto Serif SC，许可见 [FONT-LICENSE.txt](public/FONT-LICENSE.txt)。植物线稿与窗形图标为项目内 SVG，界面图标使用 Lucide React。
+
+## 日记图片
+
+启用图片前，在 Supabase SQL Editor 执行 [图片配置脚本](supabase/migrations/20260911_images.sql)。新项目先执行 `schema.sql`，再执行图片脚本。脚本新增 `entries.images` 路径数组，并创建私有 `journal-images` 存储桶和账号目录访问策略。
+
+- 登录并关联当前账号、联网后，每篇最多添加 3 张 JPG、PNG 或 WebP 图片。单个原文件不超过 20 MB。
+- 浏览器将长边缩小至最多 1600 像素并转为 JPEG，每张上传文件不超过 400 KB；透明背景会变为纸白色，不保留原图。无法压到限制以内时提示重新选择。
+- 图片位于正文下方，点击放大。上传期间不能关闭编辑器或保存日记；上传失败不会影响文字草稿。
+- 日记、草稿、JSON 和同步记录只保存图片路径，图片文件上传到私有存储桶。通过当前登录身份下载，不能以公开地址直接访问。
+- 图片路径随日记同步、软删除和冲突副本保留。移除图片或丢弃草稿不永久删除文件，保留文件仍占用云端额度。
+- JSON 导出不包含图片文件，导入路径后仍需使用原 Supabase 项目及所属账号访问。草稿中的图片已经上传，但草稿文字和路径列表不会自动同步到其他设备。
+- 第一版不支持离线添加或持久离线缓存图片，也没有容量统计和自动清理；容量可在 Supabase 后台查看。上传失败时会提示检查网络、额度和配置。

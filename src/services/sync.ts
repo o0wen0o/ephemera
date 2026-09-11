@@ -12,9 +12,9 @@ export type SyncPlan = {
 
 const stamp = (row: CloudEntry) => row.deleted_at || row.updated_at;
 const sameContent = (left: Entry, right: Entry) => {
-    const { updated_at: _leftTime, ...leftContent } = left;
-    const { updated_at: _rightTime, ...rightContent } = right;
-    return JSON.stringify(leftContent) === JSON.stringify(rightContent);
+    const { updated_at: _leftTime, images: leftImages = [], ...leftContent } = left;
+    const { updated_at: _rightTime, images: rightImages = [], ...rightContent } = right;
+    return JSON.stringify({ ...leftContent, images: leftImages }) === JSON.stringify({ ...rightContent, images: rightImages });
 };
 const asEntry = (row: CloudEntry): Entry => {
     const { user_id: _user, deleted_at: _deleted, ...entry } = row;

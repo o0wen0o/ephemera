@@ -1,3 +1,4 @@
+import { Photos } from "./Photos";
 import { Help } from "../../components/Help";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Plus, Save, X } from "lucide-react";
@@ -10,12 +11,18 @@ import { readDrafts, putDraft, removeDraft } from "../../data/drafts";
 
 export function Editor({
     entry,
+    photoUserId,
+    photoBusy,
+    onPhotoBusy,
     tags,
     moods,
     onClose,
     onSave
 }: {
     entry?: Entry;
+    photoUserId?: string;
+    photoBusy: boolean;
+    onPhotoBusy: (busy: boolean) => void;
     tags: string[];
     moods: string[];
     onClose: () => void;
@@ -84,7 +91,8 @@ export function Editor({
         setTagQuery("");
     };
     const submit = () => {
-        if (!value.title.trim() && !value.body.trim()) {
+        if (photoBusy) return;
+        if (!value.title.trim() && !value.body.trim() && !value.images?.length) {
             setError("写下一句话，再把今天收好。");
             return;
         }
@@ -153,6 +161,7 @@ export function Editor({
                     value={value.body}
                     onChange={(e) => update({ body: e.target.value })}
                 />
+                <Photos paths={value.images} userId={photoUserId} onBusy={onPhotoBusy} onChange={images => update({ images })} />
                 <div className="writing-details">
                     <fieldset>
                         <legend>窗外天气</legend>
@@ -256,7 +265,7 @@ export function Editor({
             </div>
             <footer className="editor-footer">
                 <span>{countWords(value.body)} 字</span>
-                <button type="button" className="primary" onClick={submit}>
+                <button type="button" className="primary" disabled={photoBusy} onClick={submit}>
                     <Save size={16} />
                     保存日记
                 </button>

@@ -1,3 +1,4 @@
+import { Photos } from "./features/journal/Photos";
 import { DraftsPage } from "./features/drafts/DraftsPage";
 import { EntryCard } from "./features/journal/EntryCard";
 import { Confirm } from "./components/Confirm";
@@ -416,7 +417,8 @@ export default function App() {
     const pendingSync = syncMeta.dirtyIds.length;
     const narrowed = Boolean(query || tag || mood || selectedDate);
     const headingDate = useMemo(() => HEADING_FMT.format(new Date()), []);
-    const closeEditor = () => setEditing(null);
+    const [photoBusy, setPhotoBusy] = useState(false);
+    const closeEditor = () => { if (!photoBusy) setEditing(null); };
     const startWriting = () => {
         try {
             const createdIds = new Set([
@@ -1171,6 +1173,9 @@ export default function App() {
             {editing !== null && (
                 <Modal wide label="写日记" onClose={closeEditor}>
                     <Editor
+                        photoUserId={accountAllowed ? session?.user.id : undefined}
+                        photoBusy={photoBusy}
+                        onPhotoBusy={setPhotoBusy}
                         tags={tags}
                         moods={moodOptions}
                         entry={editing === "new" ? undefined : editing}
@@ -1233,6 +1238,7 @@ export default function App() {
                             </span>
                             <h1>{reading.title}</h1>
                             <div className="reader-body">{reading.body}</div>
+                            <Photos paths={reading.images} userId={session?.user.id} />
                             <div className="reader-tags">
                                 {reading.tags.map((t) => (
                                     <span key={t}>#{t}</span>

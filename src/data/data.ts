@@ -8,6 +8,7 @@ export type Entry = {
     tags: string[];
     favorite: boolean;
     cover?: boolean;
+    images?: string[];
     updated_at: string;
 };
 export const localDate = (date = new Date()) =>
@@ -37,6 +38,7 @@ export const blankEntryFields = () => ({
     weather: "",
     tags: [] as string[],
     favorite: false,
+    images: [] as string[],
     cover: false
 });
 export const countWords = (body: string) => body.replace(/\s/g, "").length;
@@ -110,6 +112,9 @@ export const entryValid = (e: unknown): e is Entry => {
         typeof v.weather === "string" &&
         Array.isArray(v.tags) &&
         v.tags.every((t) => typeof t === "string") &&
+        (v.images === undefined || (Array.isArray(v.images) && v.images.length <= 3 &&
+            new Set(v.images).size === v.images.length &&
+            v.images.every(path => typeof path === "string" && /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/i.test(path)))) &&
         typeof v.favorite === "boolean" &&
         typeof v.updated_at === "string"
     );

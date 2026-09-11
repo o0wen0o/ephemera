@@ -302,3 +302,23 @@ test("account guard requires an explicit matching owner and errors are readable"
     assert.match(cloudError({ message: "JWT expired" }), /登录已失效/);
     assert.match(cloudError({ message: "unrecognized backend error" }), /本机内容/);
 });
+
+test("photo paths survive export, soft deletion and conflict copies", () => {
+    const image = "11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222.jpg";
+    const illustrated = { ...entry, images: [image] };
+    const journal = journalOf({ entries: [illustrated], dirtyIds: [entry.id] });
+    assert.deepEqual(parseJournal(JSON.stringify(journal)).entries[0].images, [image]);
+    const deleted = trackLocalChanges(journal, []);
+    assert.deepEqual(deleted.tombstones[0].entry.images, [image]);
+    const result = planSync(journal, [{ ...entry, body: "云端修改", images: [], updated_at: "2026-09-12T00:00:00Z" }], "2026-09-12T01:00:00Z", () => "copy");
+    assert.deepEqual(result.journal.entries.find(e => e.id === "copy").images, [image]);
+    for (const images of [[image, image], ["https://example.com/public.jpg"], [42], Array(4).fill(image)]) {
+        assert.throws(() => parseJournal(JSON.stringify({ entries: [{ ...entry, images }] })));
+    }
+});
+
+test("old entries and empty cloud image arrays do not create false conflicts", () => {
+    const local = journalOf({ entries: [entry], dirtyIds: [entry.id] });
+    const result = planSync(local, [{ ...entry, images: [] }]);
+    assert.equal(result.conflicts, 0);
+});
