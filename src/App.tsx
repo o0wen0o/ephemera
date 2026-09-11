@@ -53,6 +53,7 @@ import {
     changeCollection,
     collectionNames,
     trackLocalChanges,
+    detachAccount,
     mergeTombstones,
     dedupeEntries,
     trashedTombstones,
@@ -232,6 +233,7 @@ export default function App() {
     });
     const [bindAccount, setBindAccount] = useState(false);
     const [signingOut, setSigningOut] = useState(false);
+    const [confirmSignOut, setConfirmSignOut] = useState(false);
     const signingOutRef = useRef(false);
     const activeUserRef = useRef<string | null>(null);
     const accountAllowed = !!session && accountMatches(owner, session.user.id);
@@ -335,6 +337,42 @@ export default function App() {
         } catch {
             notify("保存失败：浏览器存储空间不足或不可用。请保留此页后重试。");
             return false;
+        }
+    };
+    /** Signing out drops the account link and the cloud baselines, back to plain local mode. */
+    const releaseAccount = () => {
+        let cleared = true;
+        try {
+            localStorage.removeItem(STORE + "-owner");
+        } catch {
+            cleared = false;
+        }
+        setOwner(null);
+        setBindAccount(false);
+        autoAttemptRef.current = "";
+        // A sync may have landed while signing out, so detach from stored state, not this closure.
+        const current = readJournal();
+        const next = detachAccount(current);
+        const left = next.entries.filter((e) => !isSample(e.id)).length;
+        const saved = !current.error && persist(next.entries, next.catalog, next.sync);
+        if (!cleared || !saved) return "已退出，但本机数据没有清干净，请检查浏览器存储权限。";
+        return left
+            ? `已退出，已同步的日记已从这台设备移除，云端仍保留。${left} 篇未同步的日记留在本机。`
+            : "已退出，已同步的日记已从这台设备移除，云端仍保留。";
+    };
+    const signOutNow = async () => {
+        if (signingOutRef.current) return;
+        signingOutRef.current = true;
+        setSigningOut(true);
+        try {
+            const { error } = await supabase!.auth.signOut();
+            setCloudMessage(error ? cloudError(error) : releaseAccount());
+        } catch (error) {
+            setCloudMessage(cloudError(error));
+        } finally {
+            signingOutRef.current = false;
+            setSigningOut(false);
+            setConfirmSignOut(false);
         }
     };
     const closeOrganizer = () => setOrganizing(false);
@@ -1287,25 +1325,7 @@ export default function App() {
                                         <button
                                             className="text-btn signout"
                                             disabled={busy || signingOut}
-                                            onClick={async () => {
-                                                if (signingOutRef.current) return;
-                                                signingOutRef.current = true;
-                                                setSigningOut(true);
-                                                try {
-                                                    const { error } =
-                                                        await supabase!.auth.signOut();
-                                                    setCloudMessage(
-                                                        error
-                                                            ? cloudError(error)
-                                                            : "已退出，日记仍保留在本机。"
-                                                    );
-                                                } catch (error) {
-                                                    setCloudMessage(cloudError(error));
-                                                } finally {
-                                                    signingOutRef.current = false;
-                                                    setSigningOut(false);
-                                                }
-                                            }}
+                                            onClick={() => setConfirmSignOut(true)}
                                         >
                                             <LogOut size={14} />
                                             {signingOut ? "正在退出…" : "退出登录"}
@@ -1575,6 +1595,21 @@ export default function App() {
                     }}
                 >
                     确认这些本机日记属于 {session.user.email}。关联后会与该账号的云端日记同步。
+                </Confirm>
+            )}
+            {confirmSignOut && (
+                <Confirm
+                    label="退出登录"
+                    title="退出登录？"
+                    cancel="取消"
+                    confirm="退出登录"
+                    disabled={signingOut}
+                    onCancel={() => {
+                        if (!signingOut) setConfirmSignOut(false);
+                    }}
+                    onConfirm={() => void signOutNow()}
+                >
+                    已同步到云端的日记会从这台设备移除，云端不受影响，重新登录即可取回。还没同步的改动会保留在本机，下次登录时上传。
                 </Confirm>
             )}
             {replaceLocal && (

@@ -24,6 +24,35 @@ export const defaultSync = (entries: Entry[] = []): SyncMeta => ({
     bases: {}
 });
 
+/**
+ * Signing out returns the device to local-only mode: whatever the cloud already holds leaves this
+ * browser, whatever is still queued stays and re-queues, and nothing is recorded as deleted — the
+ * account's cloud copies must survive.
+ */
+export function detachAccount(journal: Journal): Journal {
+    const dirty = new Set(journal.sync.dirtyIds);
+    const inCloud = (id: string) => journal.sync.bases[id] !== undefined && !dirty.has(id);
+    const entries = journal.entries.filter((e) => isSample(e.id) || !inCloud(e.id));
+    const tombstones = journal.sync.tombstones.filter((t) => !inCloud(t.entry.id));
+    const kept = new Set(tombstones.map((t) => t.entry.id));
+    const clearedTrash = Object.fromEntries(
+        Object.entries(journal.sync.clearedTrash ?? {}).filter(([id]) => kept.has(id))
+    );
+    return {
+        entries,
+        catalog: journal.catalog,
+        sync: {
+            dirtyIds: unique([
+                ...entries.filter((e) => !isSample(e.id)).map((e) => e.id),
+                ...tombstones.map((t) => t.entry.id)
+            ]),
+            tombstones,
+            ...(Object.keys(clearedTrash).length ? { clearedTrash } : {}),
+            bases: {}
+        }
+    };
+}
+
 /** Latest-wins fold by id: the single place that decides how two versions of one record are ordered. */
 export const latestById = <T>(items: T[], id: (item: T) => string, stamp: (item: T) => string) => {
     const byId = new Map<string, T>();

@@ -16,6 +16,7 @@ const {
     readJournal,
     trackLocalChanges,
     defaultSync,
+    detachAccount,
     purgeTrash,
     STORE
 } = await server.ssrLoadModule("/src/data/journal.ts");
@@ -321,4 +322,40 @@ test("old entries and empty cloud image arrays do not create false conflicts", (
     const local = journalOf({ entries: [entry], dirtyIds: [entry.id] });
     const result = planSync(local, [{ ...entry, images: [] }]);
     assert.equal(result.conflicts, 0);
+});
+
+test("signing out removes what the cloud holds and keeps what is still queued", () => {
+    const deletedAt = "2026-09-10T02:00:00.000Z";
+    const draft = { ...entry, id: "not-yet-uploaded" };
+    const queuedDelete = { ...entry, id: "delete-pending" };
+    const syncedDelete = { ...entry, id: "delete-done" };
+    const source = journalOf({
+        entries: [entry, draft],
+        dirtyIds: [draft.id, queuedDelete.id],
+        bases: { [entry.id]: entry.updated_at, [syncedDelete.id]: deletedAt },
+        clearedTrash: { [queuedDelete.id]: deletedAt, [syncedDelete.id]: deletedAt },
+        tombstones: [
+            { entry: queuedDelete, deleted_at: deletedAt },
+            { entry: syncedDelete, deleted_at: deletedAt }
+        ]
+    });
+    const next = detachAccount(source);
+    assert.deepEqual(
+        next.entries.map((e) => e.id),
+        [draft.id]
+    );
+    assert.deepEqual(
+        next.sync.tombstones.map((t) => t.entry.id),
+        [queuedDelete.id]
+    );
+    assert.deepEqual(next.sync.bases, {});
+    assert.deepEqual(next.sync.dirtyIds.sort(), [draft.id, queuedDelete.id].sort());
+    assert.deepEqual(next.sync.clearedTrash, { [queuedDelete.id]: deletedAt });
+    // The next account uploads the leftovers; nothing turns into a deletion of the old cloud copies.
+    const plan = planSync(next, []);
+    assert.deepEqual(
+        plan.uploads.map((u) => u.row.id).sort(),
+        [draft.id, queuedDelete.id].sort()
+    );
+    assert.equal(plan.conflicts, 0);
 });
