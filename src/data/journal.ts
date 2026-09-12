@@ -1,4 +1,4 @@
-import { blankEntryFields, entryValid, isSample, moods, seeds, type Entry } from "./data";
+import { blankEntryFields, defaultTags, entryValid, isSample, moods, seeds, type Entry } from "./data";
 
 export const STORE = "ephemera-journal";
 export type CollectionKind = "tags" | "moods";
@@ -17,7 +17,7 @@ export const NAME_LIMIT = 16;
 export const validName = (name: string) =>
     !!name && name.length <= NAME_LIMIT && !/[,，]/.test(name);
 export const unique = (names: string[]) => [...new Set(names.filter(Boolean))];
-export const defaultCatalog = (): Catalog => ({ tags: [], moods: [...moods] });
+export const defaultCatalog = (): Catalog => ({ tags: [...defaultTags], moods: [...moods] });
 export const defaultSync = (entries: Entry[] = []): SyncMeta => ({
     dirtyIds: unique(entries.filter((e) => !isSample(e.id)).map((e) => e.id)),
     tombstones: [],

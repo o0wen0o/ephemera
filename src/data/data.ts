@@ -36,7 +36,8 @@ const daysAgo = (n: number, hour: number, minute: number) => {
     d.setHours(hour, minute, 0, 0);
     return { date: localDate(d), created_at: new Date(Math.min(d.getTime(), Date.now())).toISOString() };
 };
-export const moods = ["平静", "开心", "感恩", "低落", "疲惫"];
+export const moods = ["开心", "期待", "低落", "焦虑", "疲惫", "复杂"];
+export const defaultTags = ["生活碎片", "埋头做事", "读写之间", "人与人", "独处时光", "沿途风景"];
 // Seed entries are display-only samples: they never enter the sync queue.
 export const SAMPLE_PREFIX = "sample-";
 export const isSample = (id: string) => id.startsWith(SAMPLE_PREFIX);
@@ -58,9 +59,9 @@ export const seeds: Entry[] = [
         title: "日子很慢，阳光很暖",
         body: "午后的阳光穿过窗帘，在桌上落下一小片金色。\n\n泡了一杯茶，翻开读到一半的书。窗外的树影轻轻晃动，突然觉得，什么也不做的时光，也值得被认真收藏。\n\n今天没有什么特别的事。可这份平常，就是生活给我的小小礼物。",
         ...daysAgo(0, 14, 20),
-        mood: "平静",
+        mood: "",
         weather: "晴天",
-        tags: ["日常", "小确幸"],
+        tags: ["生活碎片", "独处时光"],
         favorite: true,
         cover: true,
         updated_at: new Date().toISOString()
@@ -70,9 +71,9 @@ export const seeds: Entry[] = [
         title: "在雨声里，给自己留一盏灯",
         body: "下班的时候突然下起了雨。没有带伞，索性在街角的旧书店多待了一会儿。\n\n店主正在整理一摞旧诗集，空气里是纸张和雨水的气味。买下一本扉页写着陌生人名字的书，像接住了一段未曾谋面的时光。",
         ...daysAgo(1, 18, 40),
-        mood: "平静",
+        mood: "",
         weather: "小雨",
-        tags: ["随想", "阅读"],
+        tags: ["读写之间"],
         favorite: false,
         updated_at: new Date().toISOString()
     },
@@ -83,7 +84,7 @@ export const seeds: Entry[] = [
         ...daysAgo(3, 17, 5),
         mood: "开心",
         weather: "晴天",
-        tags: ["小确幸", "生活"],
+        tags: ["生活碎片"],
         favorite: true,
         updated_at: new Date().toISOString()
     },
@@ -92,9 +93,9 @@ export const seeds: Entry[] = [
         title: "散步，是和自己重新见面",
         body: "傍晚沿河走了很远。没有听歌，也没有看手机，只是慢慢地走。\n\n看见一只白鹭站在水边，看见晚风把芦苇吹成一片温柔的海。心里那些没想明白的事，似乎也不急着有答案了。",
         ...daysAgo(5, 19, 10),
-        mood: "感恩",
+        mood: "复杂",
         weather: "多云",
-        tags: ["散步", "随想"],
+        tags: ["沿途风景", "独处时光"],
         favorite: false,
         updated_at: new Date().toISOString()
     },
@@ -103,9 +104,9 @@ export const seeds: Entry[] = [
         title: "九月，愿我们从容一些",
         body: "换了一本新笔记本。在第一页写下：允许自己慢慢来。\n\n不必把每一天都过成答案。种一株植物，认真吃饭，记住路过的云。",
         ...daysAgo(7, 8, 30),
-        mood: "平静",
+        mood: "",
         weather: "多云",
-        tags: ["日常"],
+        tags: ["生活碎片"],
         favorite: false,
         updated_at: new Date().toISOString()
     }

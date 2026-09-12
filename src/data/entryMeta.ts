@@ -13,6 +13,9 @@ export const weatherIcon = (name: string) => weatherIcons.get(name) ?? Sun;
 const moodGlyphs: Record<string, string> = {
     平静: "◡",
     开心: "☀",
+    期待: "✧",
+    焦虑: "≈",
+    复杂: "☯",
     感恩: "♡",
     低落: "☂",
     疲惫: "☾"
