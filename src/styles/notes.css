@@ -1,0 +1,119 @@
+/* A note that lists several facts puts each on its own line. */
+.help-note > span {
+    display: block;
+}
+.settings-panel {
+    padding: 28px 32px;
+}
+.settings-panel .setting-section {
+    position: relative;
+    padding: 24px 0;
+}
+.settings-panel h3 {
+    font-size: 14px;
+    margin-bottom: 16px;
+    min-height: 32px;
+}
+.settings-panel h3 .help-trigger {
+    margin-left: auto;
+}
+.settings-panel .setting-section > .help-trigger {
+    position: absolute;
+    right: 0;
+    top: 24px;
+}
+.account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+.account-row > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+}
+.account-row .signout {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: #7b6d60;
+    min-height: 40px;
+}
+.settings-panel .button-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.settings-panel .cloud-message {
+    margin: 14px 0 0;
+    padding: 10px 12px;
+    border-left: 2px solid #91a37f;
+    border-radius: 0;
+    background: #f0f4e9;
+    font-size: 12px;
+}
+.settings-panel form {
+    flex-direction: column;
+}
+.settings-panel form input {
+    min-height: 44px;
+}
+.settings-panel .connection-status {
+    background: none;
+    padding: 0;
+    margin: 16px 0;
+}
+.recycle-list {
+    max-height: 230px;
+    overflow: auto;
+}
+.recycle-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+.recycle-row > div {
+    flex: 1;
+    min-width: 0;
+}
+.recycle-row strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+}
+.recycle-row small {
+    display: block;
+    font-size: 11px;
+    margin-top: 6px;
+    color: var(--ink-soft);
+}
+.modal:has(.writing-sheet) {
+    height: 92dvh;
+}
+.writing-sheet.editor {
+    min-height: 100%;
+}
+.writing-sheet .title-input {
+    margin-bottom: 18px;
+}
+.compact .cal-blank {
+    min-height: 36px;
+}
+body:has(.settings-panel) .toast {
+    left: 50%;
+    bottom: 18px;
+}
+@media (max-width: 760px) {
+    .settings-panel {
+        padding: 24px 20px;
+    }
+    .modal:has(.writing-sheet) {
+        height: 96dvh;
+    }
+    .account-row {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+}

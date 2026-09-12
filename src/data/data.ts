@@ -34,7 +34,10 @@ const daysAgo = (n: number, hour: number, minute: number) => {
     const d = new Date();
     d.setDate(d.getDate() - n);
     d.setHours(hour, minute, 0, 0);
-    return { date: localDate(d), created_at: new Date(Math.min(d.getTime(), Date.now())).toISOString() };
+    return {
+        date: localDate(d),
+        created_at: new Date(Math.min(d.getTime(), Date.now())).toISOString()
+    };
 };
 export const moods = ["开心", "期待", "低落", "焦虑", "疲惫", "复杂"];
 export const defaultTags = ["生活碎片", "埋头做事", "读写之间", "人与人", "独处时光", "沿途风景"];
@@ -123,9 +126,15 @@ export const entryValid = (e: unknown): e is Entry => {
         typeof v.weather === "string" &&
         Array.isArray(v.tags) &&
         v.tags.every((t) => typeof t === "string") &&
-        (v.images === undefined || (Array.isArray(v.images) && v.images.length <= 3 &&
-            new Set(v.images).size === v.images.length &&
-            v.images.every(path => typeof path === "string" && /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/i.test(path)))) &&
+        (v.images === undefined ||
+            (Array.isArray(v.images) &&
+                v.images.length <= 3 &&
+                new Set(v.images).size === v.images.length &&
+                v.images.every(
+                    (path) =>
+                        typeof path === "string" &&
+                        /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/i.test(path)
+                ))) &&
         typeof v.favorite === "boolean" &&
         // A cloud row leaves this column null while older entries simply omit it.
         (v.created_at == null || !Number.isNaN(Date.parse(v.created_at))) &&

@@ -1,0 +1,516 @@
+@media (min-width: 1500px) {
+    .hero {
+        grid-template-columns: 1fr 410px;
+        min-height: 367px;
+        padding-top: 45px;
+    }
+    .entry-cover {
+        height: 175px;
+    }
+    .entries-grid:not(.as-list) .entry-card:nth-child(3),
+    .entries-grid:not(.as-list) .entry-card:nth-child(5) {
+        margin-top: -175px;
+    }
+    .entry-card h3 {
+        font-size: 18px;
+    }
+    .card-content {
+        padding: 23px 24px 10px;
+    }
+    .entry-card p {
+        font-size: 12px;
+        line-height: 2.2;
+    }
+    .card-footer {
+        margin-left: 24px;
+        margin-right: 24px;
+        min-height: 52px;
+    }
+    .hero .primary {
+        font-size: 12px;
+    }
+}
+@media (max-width: 1200px) {
+    .sidebar {
+        width: 210px;
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+    .sidebar nav button.selected:before {
+        left: 18px;
+    }
+    .sidebar-bottom {
+        margin: 0 -18px;
+        padding: 18px;
+    }
+    .workspace {
+        margin-left: 210px;
+    }
+    .topbar {
+        padding: 0 28px;
+    }
+    main {
+        padding: 0 28px;
+    }
+    .card-content {
+        padding: 15px 15px 7px;
+    }
+    .entry-card h3 {
+        font-size: 15px;
+    }
+    .card-footer {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+    .entry-date .weekday {
+        display: none;
+    }
+    .entry-tags {
+        gap: 5px;
+    }
+    .topbar-sub {
+        display: none;
+    }
+    .sidebar-intro {
+        font-size: 9px;
+        margin-left: 3px;
+    }
+    .editor-inline .title-input {
+        font-size: 23px;
+    }
+}
+@media (max-width: 1000px) {
+    .right-rail {
+        display: none;
+    }
+    .entries-grid {
+        gap: 19px;
+    }
+    .card-content {
+        padding: 20px;
+    }
+    .card-footer {
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+    .entry-card h3 {
+        font-size: 17px;
+    }
+    .page-footer > span:nth-child(2) {
+        display: none;
+    }
+    .search input {
+        width: 130px;
+    }
+}
+@media (max-width: 760px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.2s;
+        width: 238px;
+        padding: calc(28px + env(safe-area-inset-top)) 23px 0;
+        height: 100dvh;
+        bottom: auto;
+        z-index: 61;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #95a68d transparent;
+    }
+    .sidebar > * {
+        flex-shrink: 0;
+    }
+    .sidebar .new-entry {
+        min-height: 48px;
+    }
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    .sidebar nav button.selected:before {
+        left: 23px;
+    }
+    .sidebar-intro {
+        font-size: 10px;
+    }
+    .sidebar-bottom {
+        margin: 0 -23px;
+        padding: 18px 23px calc(24px + env(safe-area-inset-bottom));
+    }
+    .sidebar-poem {
+        min-height: 160px;
+    }
+    .nav-scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        touch-action: none;
+        background: #23372d80;
+        backdrop-filter: blur(2px);
+    }
+    .workspace {
+        margin-left: 0;
+    }
+    .topbar {
+        height: 65px;
+        padding: 0 20px;
+        gap: 10px;
+    }
+    .mobile-menu {
+        display: inline-flex;
+        padding: 3px 4px 3px 0;
+    }
+    .breadcrumb {
+        gap: 8px;
+    }
+    .breadcrumb > svg,
+    .breadcrumb-slash {
+        display: none;
+    }
+    .search {
+        height: 32px;
+        padding: 0 8px;
+    }
+    .search input {
+        width: 130px;
+    }
+    .topbar-actions {
+        gap: 0;
+    }
+    main {
+        padding: 0 23px;
+    }
+    .hero .primary {
+        padding: 10px 12px;
+        font-size: 10px;
+        min-width: 127px;
+        margin-top: 20px;
+    }
+    .arch .botanical {
+        height: 218px;
+        width: 224px;
+        left: -40px;
+        bottom: -32px;
+    }
+    .section-heading {
+        margin-bottom: 16px;
+    }
+    .section-heading h2 {
+        font-size: 17px;
+    }
+    .entries-grid {
+        gap: 15px;
+    }
+    .card-content {
+        padding: 15px 16px 7px;
+    }
+    .card-footer {
+        margin: 8px 15px 0;
+        min-height: 42px;
+    }
+    .entry-cover {
+        height: 125px;
+    }
+    .entry-card h3 {
+        font-size: 15px;
+    }
+    .entry-card p {
+        font-size: 11px;
+        line-height: 1.95;
+    }
+    .entries-grid:not(.as-list) .entry-card:nth-child(3),
+    .entries-grid:not(.as-list) .entry-card:nth-child(5) {
+        margin-top: -125px;
+    }
+    .weather {
+        font-size: 8px;
+    }
+    .entry-cover span {
+        font-size: 8px;
+        left: 12px;
+        bottom: 13px;
+        letter-spacing: 0.5px;
+    }
+    .entry-tags {
+        font-size: 8px;
+        gap: 5px;
+    }
+    .entry-tags .tag-chip ~ .tag-chip {
+        display: none;
+    }
+    .entry-date {
+        font-size: 9px;
+    }
+    .page-footer {
+        margin-bottom: 77px;
+        font-size: 8px;
+    }
+    .mobile-bottom {
+        position: fixed;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        justify-items: center;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-around;
+        gap: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+        background: #fbfcf5f5;
+        border-top: 1px solid #dfe5d5;
+        z-index: 40;
+        backdrop-filter: blur(12px);
+    }
+    .mobile-bottom > button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        font-size: 9px;
+        color: #94a084;
+        min-width: 50px;
+    }
+    .mobile-bottom > button.active {
+        color: #435e3a;
+    }
+    .mobile-bottom .mobile-write {
+        background: #405b42;
+        color: #f6f9ed;
+        border-radius: 50%;
+        width: 55px;
+        height: 55px;
+        min-width: 55px;
+        padding: 0;
+        justify-content: center;
+        margin-top: -36px;
+        border: 5px solid #fbfcf5;
+        box-sizing: border-box;
+    }
+    .toast {
+        left: 50%;
+        bottom: 85px;
+        min-width: 260px;
+        max-width: 90vw;
+        font-size: 11px;
+    }
+    .modal-backdrop {
+        padding: 12px;
+    }
+    .modal {
+        max-height: 94dvh;
+    }
+    .editor {
+        min-height: 600px;
+    }
+    .editor-paper {
+        padding: 27px 25px 20px;
+    }
+    .editor-top {
+        padding: 12px 17px;
+    }
+    .draft-status {
+        font-size: 8px;
+    }
+    .title-input {
+        font-size: 23px;
+    }
+    .body-input {
+        font-size: 13px;
+        min-height: 220px;
+    }
+    .editor-footer {
+        padding: 14px 17px;
+    }
+    .editor-footer > span:first-child {
+        font-size: 8px;
+    }
+    .editor-footer .primary {
+        padding: 10px 12px;
+        font-size: 10px;
+    }
+    .reader-text {
+        padding: 27px;
+    }
+    .reader h1 {
+        font-size: 24px;
+    }
+    .reader-body {
+        font-size: 14px;
+    }
+    .reader-cover {
+        height: 175px;
+    }
+    .setting-section form {
+        flex-direction: column;
+    }
+    .setting-section form input {
+        min-height: 40px;
+    }
+    .offline-banner,
+    .storage-warning {
+        padding: 10px 20px;
+    }
+    .end-note {
+        font-size: 9px;
+        letter-spacing: 1px;
+    }
+}
+@media (max-width: 450px) {
+    main {
+        padding: 0 19px;
+    }
+    .topbar {
+        padding: 0 17px;
+    }
+    .arch .botanical {
+        left: -59px;
+        bottom: -28px;
+    }
+    .entries-grid {
+        grid-template-columns: 1fr;
+    }
+    .entries-grid:not(.as-list) .entry-card:nth-child(n) {
+        grid-column: auto;
+        grid-row: auto;
+        margin-top: 0;
+    }
+    .entry-cover {
+        height: 155px;
+    }
+    .entry-card h3 {
+        font-size: 17px;
+    }
+    .entry-card p {
+        font-size: 12px;
+        -webkit-line-clamp: 2;
+        min-height: 46px;
+    }
+    .entry-card:not(.featured) .card-content {
+        padding-bottom: 9px;
+    }
+    .card-content {
+        padding: 18px 19px 7px;
+    }
+    .card-footer {
+        margin: 9px 19px 0;
+        min-height: 46px;
+    }
+    .entry-date .weekday {
+        display: inline;
+    }
+    .entry-tags .tag-chip ~ .tag-chip {
+        display: inline;
+    }
+    .entry-tags {
+        font-size: 9px;
+        gap: 10px;
+    }
+    .entry-cover span {
+        font-size: 10px;
+        left: 19px;
+        bottom: 19px;
+    }
+    .search input {
+        width: 125px;
+    }
+    .as-list .entry-cover {
+        display: none;
+    }
+    .section-heading > div > span {
+        font-size: 8px;
+    }
+    .section-heading > div:first-child {
+        gap: 8px;
+    }
+    .view-toggle button {
+        padding: 5px;
+    }
+    .editor-top {
+        gap: 5px;
+    }
+    .editor-top > .text-btn {
+        font-size: 10px;
+    }
+    .editor-paper {
+        padding: 23px 20px;
+    }
+    .title-input {
+        font-size: 21px;
+    }
+    .editor-footer {
+        flex-wrap: wrap;
+    }
+    .editor-footer .error {
+        order: 3;
+        width: 100%;
+    }
+    .reader-top {
+        padding: 11px 16px;
+    }
+    .reader-top > div {
+        gap: 0;
+    }
+    .reader-text {
+        padding: 25px 23px;
+    }
+    .reader h1 {
+        font-size: 23px;
+    }
+    .reader-body {
+        font-size: 13px;
+    }
+    .reader-date {
+        font-size: 9px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *:before,
+    *:after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Independently flowing book columns keep card spacing stable at every height. */
+.entry-column {
+    display: flex;
+    flex-direction: column;
+    gap: 19px;
+    min-width: 0;
+}
+.entries-grid.as-list > .entry-column {
+    width: 100%;
+}
+.entries-grid .entry-column .entry-card:nth-child(n) {
+    margin-top: 0;
+    grid-column: auto;
+    grid-row: auto;
+}
+@media (max-width: 760px) {
+    .entry-column {
+        gap: 15px;
+    }
+}
+@media (max-width: 450px) {
+    .entries-grid {
+        display: flex;
+        flex-direction: column;
+    }
+    .entry-column {
+        display: contents;
+    }
+    .entry-card {
+        width: 100%;
+    }
+}
+@media (max-width: 760px) {
+    .sidebar {
+        visibility: hidden;
+    }
+    .sidebar.mobile-open {
+        visibility: visible;
+    }
+}

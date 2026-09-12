@@ -1,0 +1,321 @@
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: #2236296b;
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 25px;
+}
+.modal {
+    background: #fafaf4;
+    border: 1px solid #e1e7d5;
+    border-radius: 9px;
+    box-shadow: 0 25px 100px #20342235;
+    width: 520px;
+    max-width: 100%;
+    max-height: 92dvh;
+    overflow: auto;
+    position: relative;
+    outline: 0;
+}
+.modal.wide {
+    width: 830px;
+}
+.editor {
+    display: flex;
+    flex-direction: column;
+    min-height: 680px;
+}
+.editor-top {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    gap: 12px;
+}
+.draft-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    color: #919c83;
+    font-size: 9px;
+}
+.editor-paper {
+    padding: 36px 58px 22px;
+    flex: 1;
+}
+.title-input {
+    display: block;
+    width: 100%;
+    font: 500 27px/1.7 var(--serif);
+    color: #3c5238;
+    border: 0;
+    background: none;
+    padding: 0 0 13px;
+}
+.title-input::placeholder {
+    color: #a6b09a;
+}
+.body-input {
+    width: 100%;
+    min-height: 255px;
+    resize: vertical;
+    border: 0;
+    font: 14px/34px var(--serif);
+    color: #52644a;
+    padding: 0;
+    outline: 0;
+}
+.body-input::placeholder {
+    color: #aab19f;
+}
+.mood-choices button.selected {
+    background: #e4ebd9;
+    border-color: #b8c7a6;
+    color: #4d653e;
+}
+.editor-footer {
+    padding: 17px 25px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.editor-footer > span:first-child {
+    font-size: 9px;
+    color: #97a08c;
+}
+.editor-footer .primary {
+    margin-left: auto;
+}
+.error {
+    font-size: 10px;
+    color: #a35b4d;
+}
+.reader-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 22px;
+}
+.reader-top > div {
+    display: flex;
+    gap: 4px;
+}
+.reader-cover {
+    height: 215px;
+    width: 100%;
+    object-fit: cover;
+    object-position: center 44%;
+    filter: saturate(0.65);
+}
+.reader-text {
+    padding: 35px 65px 32px;
+}
+.reader-date {
+    font-size: 10px;
+    color: #8e9b80;
+}
+.reader h1 {
+    font: 500 30px/1.8 var(--serif);
+    margin: 14px 0 26px;
+    color: #40563a;
+    overflow-wrap: anywhere;
+}
+.reader-body {
+    white-space: pre-wrap;
+    font: 15px/2.4 var(--serif);
+    color: #5f6e56;
+    overflow-wrap: anywhere;
+}
+.reader-tags {
+    display: flex;
+    gap: 10px;
+    margin-top: 35px;
+    color: #90a079;
+    font-size: 11px;
+}
+.reader-end {
+    position: relative;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 36px;
+    border-top: 1px solid var(--border);
+    padding-top: 25px;
+    color: #9fac91;
+    font: 10px var(--serif);
+}
+/* Taking the help button out of the flow keeps the closing line centered on the page. */
+.reader-end .help-trigger {
+    position: absolute;
+    right: 0;
+}
+.dialog-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.dialog-heading h2 {
+    font: 500 23px var(--serif);
+}
+.setting-section {
+    padding: 23px 0;
+    border-bottom: 1px solid var(--border);
+}
+.setting-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+.setting-section p,
+.setting-section details {
+    font-size: 11px;
+    line-height: 1.9;
+    color: #859276;
+    margin-bottom: 13px;
+    overflow-wrap: anywhere;
+}
+.setting-section form {
+    display: flex;
+    gap: 8px;
+}
+.setting-section form input {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: #fffef9;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #465f3d;
+}
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #819773;
+    background: #eaf0e1;
+    padding: 11px 12px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+.connection-status i {
+    background: #869776;
+}
+.button-row {
+    display: flex;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+.cloud-message {
+    background: #eaf0e1;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 12px;
+}
+.settings-signature {
+    display: flex;
+    justify-content: space-between;
+    font:
+        italic 12px Georgia,
+        var(--serif);
+    padding-top: 22px;
+    color: #a1ac93;
+}
+.settings-signature span {
+    font: 10px var(--serif);
+}
+.confirm-dialog {
+    padding: 32px;
+    color: #6f805e;
+}
+.confirm-heading {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin: 0 0 18px;
+}
+.confirm-heading svg {
+    flex-shrink: 0;
+}
+.confirm-dialog h2 {
+    font: 500 24px var(--serif);
+    margin: 0;
+}
+.confirm-dialog p {
+    font-size: 12px;
+    line-height: 1.9;
+    color: #8b967d;
+    margin-bottom: 25px;
+}
+.danger {
+    background: #89674f;
+    color: #fff9ef;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 11px 16px;
+}
+.toast {
+    position: fixed;
+    bottom: 28px;
+    left: calc(50% + 100px);
+    transform: translateX(-50%);
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 90vw;
+    background: #354e3f;
+    color: #eef2e5;
+    padding: 12px 15px;
+    box-shadow: 0 5px 25px #25372233;
+    border: 1px solid #74886a;
+    border-radius: 7px;
+    font-size: 12px;
+    line-height: 1.7;
+}
+.toast > svg {
+    flex-shrink: 0;
+    color: #becfa9;
+}
+.toast .icon-btn {
+    color: #bdcbaa;
+}
+.storage-warning,
+.offline-banner {
+    padding: 12px 42px;
+    background: #edf0e2;
+    color: #718060;
+    font-size: 11px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    line-height: 1.7;
+}
+.storage-warning {
+    background: #f0e7d8;
+    color: #8a7154;
+}
+.storage-warning button,
+.offline-banner button {
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 3px 7px;
+    white-space: nowrap;
+}
+.mobile-bottom {
+    display: none;
+}
+.nav-scrim {
+    display: none;
+}

@@ -1,0 +1,31 @@
+/* Settings read as a single sheet; explanations live on the sprout. */
+.help-trigger {
+    display: inline-flex;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    color: #718566;
+    border-radius: 50%;
+}
+.help-trigger:hover,
+.help-trigger[aria-expanded="true"] {
+    background: #e6eedc;
+    color: #365633;
+}
+.help-note {
+    position: fixed;
+    z-index: 250;
+    /* Long notes wrap at 280px; a short one shrinks to its text instead of filling a fixed box. */
+    width: max-content;
+    max-width: min(280px, calc(100vw - 24px));
+    padding: 14px 16px;
+    border: 1px solid #ccd8c3;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px #30462920;
+    background: #fcfef8;
+    color: #4d6345;
+    font: 12px/1.9 sans-serif;
+}

@@ -3,8 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { Lock } from "./features/lock/Lock";
 import { lockEnabled } from "./services/lock";
-import "./styles/styles.css";
-import "./styles/interactions.css";
+import "./styles/index.css";
 
 function Root() {
     const [unlocked, setUnlocked] = useState(() => !lockEnabled());

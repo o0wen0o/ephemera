@@ -311,9 +311,19 @@ test("photo paths survive export, soft deletion and conflict copies", () => {
     assert.deepEqual(parseJournal(JSON.stringify(journal)).entries[0].images, [image]);
     const deleted = trackLocalChanges(journal, []);
     assert.deepEqual(deleted.tombstones[0].entry.images, [image]);
-    const result = planSync(journal, [{ ...entry, body: "云端修改", images: [], updated_at: "2026-09-12T00:00:00Z" }], "2026-09-12T01:00:00Z", () => "copy");
-    assert.deepEqual(result.journal.entries.find(e => e.id === "copy").images, [image]);
-    for (const images of [[image, image], ["https://example.com/public.jpg"], [42], Array(4).fill(image)]) {
+    const result = planSync(
+        journal,
+        [{ ...entry, body: "云端修改", images: [], updated_at: "2026-09-12T00:00:00Z" }],
+        "2026-09-12T01:00:00Z",
+        () => "copy"
+    );
+    assert.deepEqual(result.journal.entries.find((e) => e.id === "copy").images, [image]);
+    for (const images of [
+        [image, image],
+        ["https://example.com/public.jpg"],
+        [42],
+        Array(4).fill(image)
+    ]) {
         assert.throws(() => parseJournal(JSON.stringify({ entries: [{ ...entry, images }] })));
     }
 });
@@ -366,7 +376,9 @@ test("a creation stamp survives the cloud round trip without a false conflict", 
             dirtyIds: [legacy.id],
             bases: { [legacy.id]: legacy.updated_at }
         }),
-        validateCloudRows([{ ...legacy, created_at: null, updated_at: "2026-09-10T23:00:00+00:00" }])
+        validateCloudRows([
+            { ...legacy, created_at: null, updated_at: "2026-09-10T23:00:00+00:00" }
+        ])
     );
     assert.equal(nulled.conflicts, 1);
     const restored = nulled.journal.entries.find((e) => e.id === legacy.id);
@@ -402,9 +414,6 @@ test("signing out removes what the cloud holds and keeps what is still queued", 
     assert.deepEqual(next.sync.clearedTrash, { [queuedDelete.id]: deletedAt });
     // The next account uploads the leftovers; nothing turns into a deletion of the old cloud copies.
     const plan = planSync(next, []);
-    assert.deepEqual(
-        plan.uploads.map((u) => u.row.id).sort(),
-        [draft.id, queuedDelete.id].sort()
-    );
+    assert.deepEqual(plan.uploads.map((u) => u.row.id).sort(), [draft.id, queuedDelete.id].sort());
     assert.equal(plan.conflicts, 0);
 });

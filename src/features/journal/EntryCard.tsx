@@ -64,7 +64,9 @@ export function EntryCard({
                         {entry.mood ? moodGlyph(entry.mood) : ""} {entry.mood || "未标记心情"}
                     </span>
                     {entry.tags.slice(0, 2).map((t) => (
-                        <span className="tag-chip" key={t}>#{t}</span>
+                        <span className="tag-chip" key={t}>
+                            #{t}
+                        </span>
                     ))}
                 </div>
                 <button

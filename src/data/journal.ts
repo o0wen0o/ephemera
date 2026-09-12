@@ -1,4 +1,12 @@
-import { blankEntryFields, defaultTags, entryValid, isSample, moods, seeds, type Entry } from "./data";
+import {
+    blankEntryFields,
+    defaultTags,
+    entryValid,
+    isSample,
+    moods,
+    seeds,
+    type Entry
+} from "./data";
 
 export const STORE = "ephemera-journal";
 export type CollectionKind = "tags" | "moods";

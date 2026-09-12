@@ -67,11 +67,15 @@ export async function compressPhoto(file: File): Promise<Blob> {
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
         for (const quality of [0.82, 0.68, 0.5, 0.35]) {
-            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/jpeg", quality));
+            const blob = await new Promise<Blob | null>((resolve) =>
+                canvas.toBlob(resolve, "image/jpeg", quality)
+            );
             if (blob && blob.size <= 400 * 1024) return blob;
         }
         throw Error("图片压缩后仍过大，请选择尺寸更小的图片。");
-    } finally { bitmap.close(); }
+    } finally {
+        bitmap.close();
+    }
 }
 
 export async function uploadPhoto(file: File, userId: string): Promise<string> {
@@ -81,7 +85,8 @@ export async function uploadPhoto(file: File, userId: string): Promise<string> {
     if (data.session?.user.id !== userId) throw Error("登录状态已变化，请重新打开日记。");
     const path = `${userId}/${crypto.randomUUID()}.jpg`;
     const { error } = await supabase.storage.from(PHOTO_BUCKET).upload(path, blob, {
-        contentType: "image/jpeg", upsert: false
+        contentType: "image/jpeg",
+        upsert: false
     });
     if (error) throw Error("图片上传失败，请检查网络后重试。文字仍会保留。");
     return path;

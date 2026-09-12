@@ -1,5 +1,11 @@
 import { blankEntryFields, entryValid, isSample, type Entry } from "../data/data";
-import { dedupeEntries, latestById, type Journal, type SyncMeta, type Tombstone } from "../data/journal";
+import {
+    dedupeEntries,
+    latestById,
+    type Journal,
+    type SyncMeta,
+    type Tombstone
+} from "../data/journal";
 
 // A column added after the first release is nullable in Postgres, so a row can carry null
 // where the local Entry simply omits the field.
@@ -52,8 +58,7 @@ const canonicalStamp = (value: string) => {
 
 export function validateCloudRows(rows: unknown[]): CloudEntry[] {
     return rows.map((row) => {
-        if (!entryValid(row))
-            throw new Error("云端数据暂时无法读取，请稍后再试。");
+        if (!entryValid(row)) throw new Error("云端数据暂时无法读取，请稍后再试。");
         const cloud = row as CloudEntry;
         if (
             cloud.deleted_at !== undefined &&
@@ -175,13 +180,19 @@ export function planSync(
 
     for (const [id, tombstone] of tombstones) {
         const cleared = source.sync.clearedTrash?.[id];
-        if (cleared && Date.parse(tombstone.deleted_at) <= Date.parse(cleared) && !dirty.has(id)) tombstones.delete(id);
+        if (cleared && Date.parse(tombstone.deleted_at) <= Date.parse(cleared) && !dirty.has(id))
+            tombstones.delete(id);
     }
     return {
         journal: {
             entries: [...samples, ...local.values()],
             catalog: source.catalog,
-            sync: { ...source.sync, dirtyIds: [...dirty], tombstones: [...tombstones.values()], bases }
+            sync: {
+                ...source.sync,
+                dirtyIds: [...dirty],
+                tombstones: [...tombstones.values()],
+                bases
+            }
         },
         uploads,
         conflicts,
@@ -206,14 +217,16 @@ export function syncSignature(
 
 /** A read-only cloud snapshot replaces local diaries and clears this device's trash exclusions. */
 export function journalFromCloud(rows: unknown[], catalog: Journal["catalog"]): Journal {
-    const records = [...latestById(validateCloudRows(rows), row => row.id, stamp).values()];
+    const records = [...latestById(validateCloudRows(rows), (row) => row.id, stamp).values()];
     return {
-        entries: records.filter(row => !row.deleted_at).map(asEntry),
+        entries: records.filter((row) => !row.deleted_at).map(asEntry),
         catalog,
         sync: {
             dirtyIds: [],
-            tombstones: records.filter(row => !!row.deleted_at).map(row => ({ entry: asEntry(row), deleted_at: row.deleted_at! })),
-            bases: Object.fromEntries(records.map(row => [row.id, stamp(row)]))
+            tombstones: records
+                .filter((row) => !!row.deleted_at)
+                .map((row) => ({ entry: asEntry(row), deleted_at: row.deleted_at! })),
+            bases: Object.fromEntries(records.map((row) => [row.id, stamp(row)]))
         }
     };
 }

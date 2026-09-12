@@ -6,7 +6,9 @@
     "scripts": {
         "dev": "vite --host 0.0.0.0",
         "build": "tsc --noEmit && vite build",
-        "preview": "vite preview --host 0.0.0.0"
+        "preview": "vite preview --host 0.0.0.0",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.57.0",
@@ -19,6 +21,7 @@
         "@types/react": "^19.1.0",
         "@types/react-dom": "^19.1.0",
         "@vitejs/plugin-react": "^4.5.0",
+        "prettier": "^3.9.6",
         "typescript": "~5.8.3",
         "vite": "^6.3.0",
         "vite-plugin-pwa": "^1.0.3"

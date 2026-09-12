@@ -1,0 +1,196 @@
+/* Shared calendar used by recall and the date picker. */
+.journal-calendar {
+    background: #fcfcf7;
+    border: 1px solid var(--control-border);
+    border-radius: 10px;
+    padding: 20px;
+    min-width: 0;
+}
+.cal-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.cal-toolbar > div {
+    display: flex;
+    gap: 2px;
+}
+.cal-month {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font: 600 16px var(--serif);
+    padding: 8px 5px;
+    border-radius: 5px;
+}
+.cal-month:hover {
+    background: var(--control-fill);
+}
+.cal-weekdays,
+.cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+}
+.cal-weekdays {
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+}
+.cal-day {
+    min-width: 0;
+    min-height: 54px;
+    padding: 8px 2px;
+    position: relative;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: var(--green);
+    font:
+        15px Georgia,
+        serif;
+}
+.cal-day:hover {
+    background: #eaf0e1;
+}
+.cal-day[aria-current="date"] {
+    border-color: #91a082;
+}
+.cal-day[aria-pressed="true"] {
+    background: var(--green);
+    color: #f9f9ee;
+    border-color: var(--green);
+}
+.cal-day small {
+    font: 9px/1.4 var(--serif);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+.cal-day i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #839872;
+    position: absolute;
+    bottom: 4px;
+}
+.cal-day[aria-pressed="true"] i {
+    background: #e4edd5;
+}
+.cal-blank {
+    min-height: 44px;
+}
+.cal-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    margin-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 5px;
+}
+.cal-footer span {
+    font-size: 10px;
+    color: var(--ink-soft);
+}
+.cal-footer button {
+    font-size: 12px;
+    min-height: 36px;
+    border-radius: 5px;
+    padding: 8px;
+}
+.cal-footer button:hover {
+    background: var(--control-fill);
+}
+.year-picker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px 0 20px;
+}
+.year-picker label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+.year-picker input {
+    background: #fff;
+    border: 1px solid var(--control-border);
+    border-radius: 5px;
+    width: 88px;
+    padding: 8px;
+}
+.month-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding-bottom: 20px;
+}
+.month-options button {
+    min-height: 40px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+.month-options button:hover {
+    background: var(--control-fill);
+}
+.month-options button[aria-pressed="true"] {
+    background: var(--green);
+    color: white;
+}
+.date-picker {
+    position: relative;
+    width: max-content;
+    max-width: 100%;
+}
+.date-trigger {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 40px;
+    padding: 8px 11px;
+    border: 1px solid var(--control-border);
+    border-radius: 6px;
+    font-size: 12px;
+    background: #f2f5ec;
+}
+.date-trigger[aria-expanded="true"] {
+    border-color: #7c916e;
+}
+.date-popover {
+    position: absolute;
+    top: calc(100% + 7px);
+    left: 0;
+    width: 304px;
+    max-width: calc(100vw - 66px);
+    z-index: 8;
+    box-shadow: 0 12px 35px #243d2924;
+    border-radius: 10px;
+}
+.journal-calendar.compact {
+    padding: 14px;
+    background: #fffef9;
+}
+.compact .cal-toolbar {
+    margin-bottom: 12px;
+}
+.compact .cal-day {
+    min-height: 36px;
+    justify-content: center;
+}
+.compact .cal-weekdays,
+.compact .cal-days {
+    gap: 3px;
+}
+.compact .cal-footer {
+    margin-top: 10px;
+}

@@ -1,0 +1,164 @@
+/* Writing controls share one selection language; no native select menus. */
+.writing-sheet .editor-paper {
+    padding: 32px 48px 24px;
+}
+.writing-sheet .editor-top {
+    position: sticky;
+    top: 0;
+    background: #fafaf4;
+    z-index: 5;
+}
+.writing-sheet .draft-status {
+    font-size: 11px;
+    color: var(--ink-soft);
+}
+.writing-sheet .text-btn {
+    font-size: 13px;
+    min-height: 36px;
+}
+.writing-date {
+    margin: 0 0 20px;
+}
+.writing-sheet .body-input {
+    min-height: 240px;
+    font-size: 16px;
+    color: #465b41;
+}
+.writing-sheet .editor-footer {
+    position: sticky;
+    bottom: 0;
+    background: #fafaf4;
+    z-index: 3;
+    flex-wrap: wrap;
+}
+.writing-sheet .editor-footer > span:first-child {
+    font-size: 12px;
+}
+.writing-sheet .editor-footer .field-error {
+    flex-basis: 100%;
+}
+.writing-details {
+    margin-top: 26px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+.writing-details fieldset {
+    margin: 0 0 24px;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+.writing-details legend {
+    font-size: 13px;
+    padding: 0;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+.writing-details legend span {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-left: 8px;
+    font-weight: 400;
+}
+.choice-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.choice-chips button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 1px solid var(--control-border);
+    background: #fcfcf8;
+    color: #596b50;
+    font-size: 12px;
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+}
+.choice-chips button:hover {
+    border-color: #9aa98e;
+    background: #eef3e6;
+}
+.choice-chips button[aria-pressed="true"] {
+    color: #f6f8ee;
+    background: #435d40;
+    border-color: #435d40;
+}
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.selected-tags:not(:empty) {
+    margin-bottom: 12px;
+}
+.selected-tags button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    min-height: 36px;
+    border-radius: 5px;
+    background: #e4ecda;
+    color: #3e5938;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+.tag-entry {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--control-border);
+    border-radius: 6px;
+    background: #fffffb;
+    padding: 2px 5px 2px 12px;
+}
+.tag-entry:focus-within {
+    outline: 2px solid #a3b398;
+    outline-offset: 2px;
+}
+.tag-entry input {
+    flex: 1;
+    width: 100%;
+    min-height: 38px;
+    border: 0;
+    background: none;
+    outline: none;
+    font-size: 13px;
+}
+.tag-entry input:focus-visible {
+    outline: none;
+}
+.tag-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 8px;
+    margin-top: 8px;
+    max-height: 160px;
+    overflow: auto;
+}
+.tag-suggestions button {
+    font-size: 12px;
+    min-height: 34px;
+    padding: 6px 9px;
+    border-radius: 5px;
+    color: var(--ink-soft);
+}
+.tag-suggestions button:hover {
+    background: var(--control-fill);
+}
+.tag-suggestions button:active {
+    transform: none;
+}
+.tag-suggestions .create-tag {
+    color: #3b5c36;
+}
+.field-error {
+    color: #975343;
+    font-size: 12px;
+    line-height: 1.7;
+    margin: 8px 0 0;
+}
