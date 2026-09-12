@@ -35,18 +35,20 @@ export function Editor({
         } catch {
             /* Start from the saved entry when draft storage is unavailable. */
         }
+        const now = new Date();
         return entry
             ? { ...entry }
             : {
                   id: crypto.randomUUID(),
                   title: "",
                   body: "",
-                  date: localDate(),
+                  date: localDate(now),
                   mood: "",
                   weather: "晴天",
                   tags: [],
                   favorite: false,
-                  updated_at: new Date().toISOString()
+                  created_at: now.toISOString(),
+                  updated_at: now.toISOString()
               };
     });
     const [tagQuery, setTagQuery] = useState("");

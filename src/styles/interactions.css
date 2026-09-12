@@ -972,8 +972,9 @@ main {
 .help-note {
     position: fixed;
     z-index: 250;
-    width: 280px;
-    max-width: calc(100vw - 24px);
+    /* Long notes wrap at 280px; a short one shrinks to its text instead of filling a fixed box. */
+    width: max-content;
+    max-width: min(280px, calc(100vw - 24px));
     padding: 14px 16px;
     border: 1px solid #ccd8c3;
     border-radius: 8px;
@@ -981,6 +982,10 @@ main {
     background: #fcfef8;
     color: #4d6345;
     font: 12px/1.9 sans-serif;
+}
+/* A note that lists several facts puts each on its own line. */
+.help-note > span {
+    display: block;
 }
 .settings-panel {
     padding: 28px 32px;

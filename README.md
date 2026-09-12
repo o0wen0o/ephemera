@@ -4,7 +4,7 @@
 
 ## 功能
 
-- **日记**：新建、编辑、阅读、搜索、收藏，支持卡片与列表展示，以及标签、心情、日期组合筛选。
+- **日记**：新建、编辑、阅读、搜索、收藏，支持卡片与列表展示，以及标签、心情、日期组合筛选。阅读页末尾的说明里可以查看写下与最后更新的时刻。
 - **草稿**：独立页面区分「尚未创建」与「修改中」，支持继续编辑、丢弃和卡片／列表展示。写作时即时保存本机草稿，再次点击写日记会优先恢复最近一份尚未创建的草稿。
 - **回顾与珍藏**：通过日历浏览记录，集中查看收藏的日记。
 - **整理书页**：管理标签与心情，支持新增、改名、合并、移除及关联篇数统计；单篇日记最多 8 个标签，心情可以留空。
@@ -45,7 +45,7 @@ Windows 也可以在安装依赖后双击 `start.cmd`。它优先使用本机 Co
    VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
    ```
 
-2. 新数据库在 Supabase SQL Editor 执行 [schema.sql](supabase/schema.sql)。已使用旧版表结构的数据库执行 [同步迁移](supabase/migrations/20260910_sync.sql)。初始化脚本包含策略创建语句，不要反复运行整份脚本，以免同名策略报错。
+2. 在 Supabase SQL Editor 执行 [schema.sql](supabase/schema.sql)。这一份脚本就是完整的数据库：建表、补列、RLS 策略、索引、图片存储桶都在里面。新项目直接跑；旧项目升级也跑同一份；重复执行不会报错，也不会动到已有数据。
 3. 启用邮箱登录，在 Authentication 的 URL 配置中设置站点地址，并允许登录跳转回该地址。本地开发使用 `http://localhost:5173`。
 4. 重启开发服务器，在「设置与备份」中输入邮箱，通过邮件中的链接登录，再确认「关联当前账号」。
 
@@ -126,8 +126,7 @@ src/
   services/                   Supabase 客户端、同步与账号检查
   styles/                     基础布局与交互样式
 supabase/
-  schema.sql                  数据库初始化与 RLS 策略
-  migrations/                 旧数据库升级脚本
+  schema.sql                  数据库结构、RLS 策略与图片存储桶
 public/                       字体、图标、封面等静态资源
 tests/                       数据与同步回归测试
 ```
@@ -136,9 +135,19 @@ tests/                       数据与同步回归测试
 
 森林封面使用本地资源 `public/garden.jpg`，来自 Unsplash。字体为 Noto Serif SC，许可见 [FONT-LICENSE.txt](public/FONT-LICENSE.txt)。植物线稿与窗形图标为项目内 SVG，界面图标使用 Lucide React。
 
+## 日期与时间
+
+每篇日记保存三个时间信息：
+
+- `date`：日记所属日期，`YYYY-MM-DD`，可在编辑器中改写。
+- `created_at`：首次写下的时刻，ISO 文本，保存后不再改动。
+- `updated_at`：最后一次修改的时刻，ISO 文本，同时用于同步冲突判断。
+
+两个时刻以 UTC 存储，按本机时区显示在阅读页末尾的说明里。日记只能改写日期，不能改写这两个时刻。本次改动之前写下的日记没有 `created_at`，界面会省略这一项，不会补写假数据。已有数据库重新执行一次 [schema.sql](supabase/schema.sql) 即可补上该列。
+
 ## 日记图片
 
-启用图片前，在 Supabase SQL Editor 执行 [图片配置脚本](supabase/migrations/20260911_images.sql)。新项目先执行 `schema.sql`，再执行图片脚本。脚本新增 `entries.images` 路径数组，并创建私有 `journal-images` 存储桶和账号目录访问策略。
+图片所需的一切都在 [schema.sql](supabase/schema.sql) 里：`entries.images` 路径数组、私有 `journal-images` 存储桶、以及按账号目录隔离的访问策略。没有单独的脚本要跑。
 
 - 登录并关联当前账号、联网后，每篇最多添加 3 张 JPG、PNG 或 WebP 图片。单个原文件不超过 20 MB。
 - 浏览器将长边缩小至最多 1600 像素并转为 JPEG，每张上传文件不超过 400 KB；透明背景会变为纸白色，不保留原图。无法压到限制以内时提示重新选择。

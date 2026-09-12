@@ -26,7 +26,7 @@ const journalOf = ({ entries = [], catalog = { tags: [], moods: [] }, ...sync })
     catalog,
     sync: { dirtyIds: [], tombstones: [], bases: {}, ...sync }
 });
-const { planSync } = await server.ssrLoadModule("/src/services/sync.ts");
+const { planSync, validateCloudRows } = await server.ssrLoadModule("/src/services/sync.ts");
 const entry = {
     id: "test-only",
     title: "测试书页",
@@ -322,6 +322,55 @@ test("old entries and empty cloud image arrays do not create false conflicts", (
     const local = journalOf({ entries: [entry], dirtyIds: [entry.id] });
     const result = planSync(local, [{ ...entry, images: [] }]);
     assert.equal(result.conflicts, 0);
+});
+
+test("a creation stamp survives the cloud round trip without a false conflict", () => {
+    const stamped = {
+        ...entry,
+        created_at: "2026-09-10T07:05:00.000Z",
+        cover: false,
+        images: []
+    };
+    const local = journalOf({ entries: [stamped], dirtyIds: [stamped.id] });
+    const uploaded = planSync(local, []);
+    assert.equal(uploaded.uploads[0].row.created_at, stamped.created_at);
+
+    // Postgres hands the same instant back with an offset instead of a trailing Z; every stamp
+    // is rewritten to one spelling on arrival so later text comparisons stay meaningful.
+    const edited = { ...stamped, updated_at: "2026-09-11T00:00:00.000Z" };
+    const [cloudRow] = validateCloudRows([
+        {
+            ...stamped,
+            created_at: "2026-09-10T07:05:00+00:00",
+            updated_at: "2026-09-10T23:00:00+00:00",
+            deleted_at: null
+        }
+    ]);
+    assert.equal(cloudRow.created_at, "2026-09-10T07:05:00.000Z");
+    assert.equal(cloudRow.updated_at, "2026-09-10T23:00:00.000Z");
+    const pulled = planSync(
+        journalOf({
+            entries: [edited],
+            dirtyIds: [edited.id],
+            bases: { [edited.id]: stamped.updated_at }
+        }),
+        [cloudRow]
+    );
+    assert.equal(pulled.conflicts, 0);
+
+    // A row written before the column existed comes back null, and stays absent locally.
+    const legacy = { ...entry, cover: false, images: [] };
+    const nulled = planSync(
+        journalOf({
+            entries: [{ ...legacy, body: "本机修改", updated_at: "2026-09-11T00:00:00.000Z" }],
+            dirtyIds: [legacy.id],
+            bases: { [legacy.id]: legacy.updated_at }
+        }),
+        validateCloudRows([{ ...legacy, created_at: null, updated_at: "2026-09-10T23:00:00+00:00" }])
+    );
+    assert.equal(nulled.conflicts, 1);
+    const restored = nulled.journal.entries.find((e) => e.id === legacy.id);
+    assert.equal("created_at" in restored, false);
 });
 
 test("signing out removes what the cloud holds and keeps what is still queued", () => {

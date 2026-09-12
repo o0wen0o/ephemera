@@ -42,7 +42,15 @@ import {
 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { registerSW } from "virtual:pwa-register";
-import { type Entry, countWords, displayDate, isSample, localDate, thisMonth } from "./data/data";
+import {
+    type Entry,
+    countWords,
+    displayDate,
+    displayStamp,
+    isSample,
+    localDate,
+    thisMonth
+} from "./data/data";
 
 import { Calendar } from "./components/Calendar";
 import { CollectionManager } from "./features/collections/CollectionManager";
@@ -1283,6 +1291,10 @@ export default function App() {
                             <div className="reader-end">
                                 <Leaf size={20} />
                                 <span>{countWords(reading.body)} 字，都是生活的回声。</span>
+                                <Help label="时间">
+                                    {reading.created_at && <span>写于 {displayStamp(reading.created_at)}</span>}
+                                    <span>更新于 {displayStamp(reading.updated_at)}</span>
+                                </Help>
                             </div>
                         </div>
                     </article>

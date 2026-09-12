@@ -1,7 +1,14 @@
-import { entryValid, isSample, type Entry } from "../data/data";
+import { blankEntryFields, entryValid, isSample, type Entry } from "../data/data";
 import { dedupeEntries, latestById, type Journal, type SyncMeta, type Tombstone } from "../data/journal";
 
-export type CloudEntry = Entry & { user_id?: string; deleted_at?: string | null };
+// A column added after the first release is nullable in Postgres, so a row can carry null
+// where the local Entry simply omits the field.
+export type CloudEntry = Omit<Entry, "created_at" | "updated_at"> & {
+    user_id?: string;
+    created_at?: string | null;
+    updated_at: string;
+    deleted_at?: string | null;
+};
 export type SyncUpload = { row: CloudEntry; expectedUpdatedAt: string | null };
 export type SyncPlan = {
     journal: Journal;
@@ -11,20 +18,37 @@ export type SyncPlan = {
 };
 
 const stamp = (row: CloudEntry) => row.deleted_at || row.updated_at;
-const sameContent = (left: Entry, right: Entry) => {
-    const { updated_at: _leftTime, images: leftImages = [], ...leftContent } = left;
-    const { updated_at: _rightTime, images: rightImages = [], ...rightContent } = right;
-    return JSON.stringify({ ...leftContent, images: leftImages }) === JSON.stringify({ ...rightContent, images: rightImages });
+/**
+ * Content equality that survives the round trip through Postgres: key order, an absent field
+ * versus its column default, and an instant re-rendered with an offset must all read as equal.
+ */
+const contentKey = (entry: Entry) => {
+    const { updated_at: _stamp, ...content } = entry;
+    const normalized: Record<string, unknown> = { ...content };
+    // The shared blank list is the one place an optional field declares its column default, so a
+    // field the local entry omits still reads as equal to the default the cloud row carries.
+    for (const [key, fallback] of Object.entries(blankEntryFields())) normalized[key] ??= fallback;
+    // An imported backup can still spell an instant with an offset, so compare the instant itself.
+    normalized.created_at = entry.created_at ? Date.parse(entry.created_at) : 0;
+    return JSON.stringify(normalized, Object.keys(normalized).sort());
 };
+const sameContent = (left: Entry, right: Entry) => contentKey(left) === contentKey(right);
 const asEntry = (row: CloudEntry): Entry => {
-    const { user_id: _user, deleted_at: _deleted, ...entry } = row;
-    return entry;
+    const { user_id: _user, deleted_at: _deleted, created_at, ...rest } = row;
+    return { ...rest, ...(created_at ? { created_at } : {}) };
 };
 const tombstoneRow = (tombstone: Tombstone): CloudEntry => ({
     ...tombstone.entry,
     updated_at: tombstone.deleted_at,
     deleted_at: tombstone.deleted_at
 });
+
+// Postgres renders an instant as "+00:00" where the browser writes a trailing "Z". Every stored
+// stamp is canonicalised on arrival so the rest of the app only ever compares one spelling.
+const canonicalStamp = (value: string) => {
+    const at = Date.parse(value);
+    return Number.isNaN(at) ? value : new Date(at).toISOString();
+};
 
 export function validateCloudRows(rows: unknown[]): CloudEntry[] {
     return rows.map((row) => {
@@ -37,7 +61,12 @@ export function validateCloudRows(rows: unknown[]): CloudEntry[] {
             typeof cloud.deleted_at !== "string"
         )
             throw new Error("云端数据暂时无法读取，请稍后再试。");
-        return cloud;
+        return {
+            ...cloud,
+            created_at: cloud.created_at && canonicalStamp(cloud.created_at),
+            updated_at: canonicalStamp(cloud.updated_at),
+            deleted_at: cloud.deleted_at && canonicalStamp(cloud.deleted_at)
+        };
     });
 }
 

@@ -848,6 +848,7 @@ main {
     font-size: 11px;
 }
 .reader-end {
+    position: relative;
     display: flex;
     gap: 10px;
     align-items: center;
@@ -857,6 +858,11 @@ main {
     padding-top: 25px;
     color: #9fac91;
     font: 10px var(--serif);
+}
+/* Taking the help button out of the flow keeps the closing line centered on the page. */
+.reader-end .help-trigger {
+    position: absolute;
+    right: 0;
 }
 .dialog-heading {
     display: flex;
