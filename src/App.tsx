@@ -140,6 +140,7 @@ const VIEWS: Record<
     }
 };
 const VIEW_ORDER = Object.keys(VIEWS) as View[];
+const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000;
 // Intl construction is expensive and the value only changes at midnight, so build it once.
 const HEADING_FMT = new Intl.DateTimeFormat("zh-CN", {
     month: "long",
@@ -291,14 +292,38 @@ export default function App() {
         };
     }, []);
     useEffect(() => {
+        let stopWatching: (() => void) | null = null;
+        let disposed = false;
         const update = registerSW({
             onNeedRefresh() {
                 setUpdateApp(() => update);
             },
             onOfflineReady() {
                 setToast("离线书页已备好，断网也可以写日记。");
+            },
+            onRegisteredSW(_swUrl, registration) {
+                if (!registration || disposed) return;
+                // The browser only looks for a new service worker on navigation, so a
+                // long-lived tab or an installed PWA never notices a deploy. Poll instead.
+                const check = () => {
+                    if (document.visibilityState !== "visible" || !navigator.onLine) return;
+                    registration.update().catch(() => {});
+                };
+                const timer = window.setInterval(check, UPDATE_CHECK_INTERVAL);
+                document.addEventListener("visibilitychange", check);
+                window.addEventListener("online", check);
+                stopWatching = () => {
+                    window.clearInterval(timer);
+                    document.removeEventListener("visibilitychange", check);
+                    window.removeEventListener("online", check);
+                };
+                check();
             }
         });
+        return () => {
+            disposed = true;
+            stopWatching?.();
+        };
     }, []);
     useEffect(() => {
         if (!supabase) return;
