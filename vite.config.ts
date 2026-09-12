@@ -33,6 +33,17 @@ export default defineConfig({
             }
         })
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    react: ["react", "react-dom", "react-dom/client"],
+                    supabase: ["@supabase/supabase-js"],
+                    icons: ["lucide-react"]
+                }
+            }
+        }
+    },
     server: { port: 5173, strictPort: true },
     preview: { port: 4173, strictPort: true }
 });
