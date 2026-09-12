@@ -947,9 +947,18 @@ main {
     padding: 32px;
     color: #6f805e;
 }
+.confirm-heading {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin: 0 0 18px;
+}
+.confirm-heading svg {
+    flex-shrink: 0;
+}
 .confirm-dialog h2 {
     font: 500 24px var(--serif);
-    margin: 18px 0;
+    margin: 0;
 }
 .confirm-dialog p {
     font-size: 12px;
@@ -1533,4 +1542,54 @@ main {
     .sidebar.mobile-open {
         visibility: visible;
     }
+}
+.lock-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--paper);
+}
+.lock-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+    padding: 32px 26px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fffef9;
+    color: var(--green);
+}
+.lock-card h1 {
+    font: 20px var(--serif);
+    margin: 0;
+}
+.lock-card p {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0;
+}
+.lock-card input {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: #fffef9;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #465f3d;
+}
+.lock-card button {
+    width: 100%;
+    justify-content: center;
+}
+.lock-error {
+    color: #a8503f;
+}
+.lock-forgot {
+    margin-top: 18px;
 }

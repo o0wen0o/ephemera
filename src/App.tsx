@@ -10,6 +10,7 @@ import { readDrafts, removeDraft } from "./data/drafts";
 import { journalFromCloud } from "./services/sync";
 import { purgeTrash } from "./data/journal";
 import { Help } from "./components/Help";
+import { clearLock, lockEnabled, setPassword } from "./services/lock";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
     BookOpen,
@@ -38,6 +39,7 @@ import {
     List,
     Tags,
     MonitorSmartphone,
+    Lock as LockIcon,
     type LucideIcon
 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
@@ -190,6 +192,8 @@ export default function App() {
     const [editing, setEditing] = useState<Entry | "new" | null>(null);
     const [reading, setReading] = useState<Entry | null>(null);
     const [settings, setSettings] = useState(false);
+    const [hasLock, setHasLock] = useState(lockEnabled);
+    const [newPassword, setNewPassword] = useState("");
     const [replaceLocal, setReplaceLocal] = useState(false);
     const closeReplaceLocal = () => {
         if (!busy) setReplaceLocal(false);
@@ -1493,6 +1497,53 @@ export default function App() {
                                     e.target.value = "";
                                 }}
                             />
+                        </div>
+                        <div className="setting-section">
+                            <h3>
+                                <LockIcon size={18} />
+                                密码锁
+                                <Help label="密码锁">
+                                    打开芸窗时需要输入密码。密码只存在这台设备，忘记后可清除浏览器数据重来。日记本身仍是明文保存，密码锁防的是随手翻看。
+                                </Help>
+                            </h3>
+                            <div className="connection-status">
+                                <i />
+                                {hasLock ? "已开启密码锁" : "尚未设置密码"}
+                            </div>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    void setPassword(newPassword).then(() => {
+                                        setHasLock(true);
+                                        setNewPassword("");
+                                        notify(hasLock ? "密码已更改。" : "密码已设置，下次打开需要输入。");
+                                    });
+                                }}
+                            >
+                                <input
+                                    type="password"
+                                    required
+                                    aria-label={hasLock ? "新密码" : "设置密码"}
+                                    placeholder={hasLock ? "新密码" : "设置一个密码"}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                />
+                                <button className="primary" disabled={!newPassword}>
+                                    {hasLock ? "更改密码" : "设置密码"}
+                                </button>
+                            </form>
+                            {hasLock && (
+                                <button
+                                    className="text-btn"
+                                    onClick={() => {
+                                        clearLock();
+                                        setHasLock(false);
+                                        notify("密码锁已关闭。");
+                                    }}
+                                >
+                                    关闭密码锁
+                                </button>
+                            )}
                         </div>
                         <div className="setting-section">
                             <h3>

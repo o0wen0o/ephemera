@@ -23,8 +23,10 @@ export function Confirm({
     return (
         <Modal label={label} onClose={onCancel}>
             <div className="confirm-dialog">
-                <Trash2 size={25} />
-                <h2>{title}</h2>
+                <div className="confirm-heading">
+                    <Trash2 size={22} />
+                    <h2>{title}</h2>
+                </div>
                 <p>{children}</p>
                 <div className="button-row">
                     <button className="outline" onClick={onCancel}>
